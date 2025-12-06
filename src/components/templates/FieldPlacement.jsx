@@ -1,0 +1,488 @@
+import React, { useState } from 'react';
+import { cn } from '@/lib/utils';
+import { Document, Page, pdfjs } from 'react-pdf';
+import {
+  Pen,
+  Type,
+  Calendar,
+  CheckSquare,
+  Hash,
+  Move,
+  ZoomIn,
+  ZoomOut,
+  Trash2,
+  Copy,
+  Users,
+  Upload
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+
+// Configure PDF.js worker to match react-pdf's version
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+const fieldTypes = [
+  { id: 'signature', icon: Pen, label: 'Signature', color: 'bg-indigo-500' },
+  { id: 'initials', icon: Type, label: 'Initials', color: 'bg-purple-500' },
+  { id: 'date', icon: Calendar, label: 'Date', color: 'bg-emerald-500' },
+  { id: 'text', icon: Type, label: 'Text', color: 'bg-blue-500' },
+  { id: 'checkbox', icon: CheckSquare, label: 'Checkbox', color: 'bg-amber-500' },
+  { id: 'number', icon: Hash, label: 'Number', color: 'bg-rose-500' },
+];
+
+const mockFields = [
+  { id: 1, type: 'signature', x: 350, y: 680, width: 180, height: 60, role: 'signer_1' },
+  { id: 2, type: 'date', x: 350, y: 750, width: 120, height: 30, role: 'signer_1' },
+  { id: 3, type: 'signature', x: 350, y: 820, width: 180, height: 60, role: 'signer_2' },
+];
+
+export default function FieldPlacement({ className, documentPreview, onFieldsChange, parties = [] }) {
+  const [zoom, setZoom] = useState(100);
+  const [fields, setFields] = useState([]);
+  const [selectedField, setSelectedField] = useState(null);
+  const [draggedType, setDraggedType] = useState(null);
+  const [draggingField, setDraggingField] = useState(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+
+  // Notify parent when fields change
+  const updateFields = (newFields) => {
+    setFields(newFields);
+    if (onFieldsChange) {
+      onFieldsChange(newFields);
+    }
+  };
+
+  // Update a specific field
+  const updateField = (fieldId, updates) => {
+    updateFields(fields.map(f => f.id === fieldId ? { ...f, ...updates } : f));
+  };
+
+  const handleDragStart = (type) => {
+    setDraggedType(type);
+  };
+
+  const handleFieldMouseDown = (e, fieldId) => {
+    e.stopPropagation();
+    const field = fields.find(f => f.id === fieldId);
+    if (field) {
+      setDraggingField(fieldId);
+      setSelectedField(fieldId);
+      const rect = e.currentTarget.getBoundingClientRect();
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+    }
+  };
+
+  const handleResizeStart = (e, fieldId) => {
+    e.stopPropagation();
+    const field = fields.find(f => f.id === fieldId);
+    if (field) {
+      setIsResizing(true);
+      setDraggingField(fieldId);
+      setResizeStart({
+        x: e.clientX,
+        y: e.clientY,
+        width: field.width,
+        height: field.height
+      });
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (draggingField && isResizing) {
+      // Resizing
+      const deltaX = (e.clientX - resizeStart.x) / (zoom / 100);
+      const deltaY = (e.clientY - resizeStart.y) / (zoom / 100);
+
+      updateFields(fields.map(field =>
+        field.id === draggingField
+          ? {
+              ...field,
+              width: Math.max(50, resizeStart.width + deltaX),
+              height: Math.max(20, resizeStart.height + deltaY)
+            }
+          : field
+      ));
+    } else if (draggingField) {
+      // Dragging
+      const canvas = e.currentTarget;
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left - dragOffset.x) / (zoom / 100);
+      const y = (e.clientY - rect.top - dragOffset.y) / (zoom / 100);
+
+      updateFields(fields.map(field =>
+        field.id === draggingField
+          ? { ...field, x: Math.max(0, x), y: Math.max(0, y) }
+          : field
+      ));
+    }
+  };
+
+  const handleMouseUp = () => {
+    setDraggingField(null);
+    setIsResizing(false);
+  };
+  
+  return (
+    <div className={cn('flex h-[700px] bg-slate-50 rounded-xl overflow-hidden border border-slate-200', className)}>
+      {/* Left Panel - Field Types */}
+      <div className="w-64 bg-white border-r border-slate-200 p-4">
+        <h3 className="font-semibold text-slate-900 mb-4">Field Types</h3>
+        <div className="space-y-2">
+          {fieldTypes.map(field => (
+            <div
+              key={field.id}
+              draggable
+              onDragStart={() => handleDragStart(field.id)}
+              className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 cursor-move hover:bg-slate-100 hover:border-slate-300 transition-colors"
+            >
+              <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center text-white', field.color)}>
+                <field.icon className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-medium text-slate-700">{field.label}</span>
+            </div>
+          ))}
+        </div>
+        
+        {parties.length > 0 && (
+          <div className="mt-6 pt-6 border-t border-slate-200">
+            <h4 className="text-sm font-medium text-slate-700 mb-3">Assigned Roles</h4>
+            <div className="space-y-2">
+              {parties.map((party, index) => {
+                const colors = [
+                  { bg: 'bg-indigo-50', border: 'border-indigo-200', dot: 'bg-indigo-500', text: 'text-indigo-700' },
+                  { bg: 'bg-emerald-50', border: 'border-emerald-200', dot: 'bg-emerald-500', text: 'text-emerald-700' },
+                  { bg: 'bg-purple-50', border: 'border-purple-200', dot: 'bg-purple-500', text: 'text-purple-700' },
+                  { bg: 'bg-amber-50', border: 'border-amber-200', dot: 'bg-amber-500', text: 'text-amber-700' },
+                ];
+                const color = colors[index % colors.length];
+                return (
+                  <div key={party.id} className={`flex items-center gap-2 p-2 rounded-lg ${color.bg} border ${color.border}`}>
+                    <div className={`w-3 h-3 rounded-full ${color.dot}`} />
+                    <span className={`text-sm ${color.text}`}>{party.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-slate-500 mt-3">
+              Parties are auto-created when you add signature fields
+            </p>
+          </div>
+        )}
+      </div>
+      
+      {/* Center - Document Canvas */}
+      <div className="flex-1 flex flex-col">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => setZoom(prev => Math.max(prev - 25, 50))}>
+              <ZoomOut className="w-4 h-4" />
+            </Button>
+            <span className="text-sm font-medium text-slate-600 w-12 text-center">{zoom}%</span>
+            <Button variant="ghost" size="icon" onClick={() => setZoom(prev => Math.min(prev + 25, 200))}>
+              <ZoomIn className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-500">Page 1 of 3</span>
+          </div>
+        </div>
+        
+        {/* Canvas */}
+        <div className="flex-1 overflow-auto p-6 flex items-center justify-center">
+          {!documentPreview?.data ? (
+            <div className="text-center py-12 max-w-md">
+              <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                <Upload className="w-10 h-10 text-slate-400" />
+              </div>
+              <h3 className="font-semibold text-slate-900 mb-2">No Document Uploaded</h3>
+              <p className="text-sm text-slate-500 mb-4">
+                Please go back to the previous step and upload a document before placing signature fields.
+              </p>
+            </div>
+          ) : (
+            <div
+              className="bg-white shadow-xl rounded relative select-none"
+              style={{
+                width: 595 * (zoom / 100),
+                height: 842 * (zoom / 100),
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                if (draggedType) {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = (e.clientX - rect.left) / (zoom / 100);
+                  const y = (e.clientY - rect.top) / (zoom / 100);
+
+                  // For signature/initials fields, assign to next available party
+                  // Count existing signature/initials fields to determine which party to assign
+                  const signatureFields = fields.filter(f => f.type === 'signature' || f.type === 'initials');
+                  const nextPartyIndex = signatureFields.length;
+                  const assignedRole = (draggedType === 'signature' || draggedType === 'initials')
+                    ? (nextPartyIndex + 1).toString()
+                    : parties[0]?.id.toString() || 'unassigned';
+
+                  updateFields([...fields, {
+                    id: Date.now(),
+                    type: draggedType,
+                    x,
+                    y,
+                    width: draggedType === 'signature' ? 180 : 120,
+                    height: draggedType === 'signature' ? 60 : 30,
+                    role: assignedRole,
+                    required: true
+                  }]);
+                  setDraggedType(null);
+                }
+              }}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+            >
+              {/* Document Content */}
+              {documentPreview?.data ? (
+                documentPreview.type === 'application/pdf' ? (
+                  <div className="absolute inset-0 pointer-events-none">
+                    <Document
+                      file={documentPreview.data}
+                      onLoadError={(error) => console.error('PDF load error:', error)}
+                      loading={<div className="absolute inset-0 flex items-center justify-center bg-white"><div className="text-slate-500">Loading PDF...</div></div>}
+                    >
+                      <Page
+                        pageNumber={1}
+                        width={595}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                      />
+                    </Document>
+                  </div>
+                ) : (
+                  <img
+                    src={documentPreview.data}
+                    alt="Document"
+                    className="absolute inset-0 w-full h-full object-cover rounded pointer-events-none"
+                    draggable={false}
+                  />
+                )
+              ) : (
+                <div className="absolute inset-0 p-12 pointer-events-none">
+                  <div className="space-y-4">
+                    <div className="h-6 bg-slate-200 rounded w-1/2" />
+                    <div className="h-3 bg-slate-100 rounded w-full" />
+                    <div className="h-3 bg-slate-100 rounded w-5/6" />
+                    <div className="h-3 bg-slate-100 rounded w-full" />
+                    <div className="h-3 bg-slate-100 rounded w-4/6" />
+                    <div className="mt-8 space-y-3">
+                      <div className="h-4 bg-slate-200 rounded w-1/3" />
+                      <div className="h-3 bg-slate-100 rounded w-full" />
+                      <div className="h-3 bg-slate-100 rounded w-full" />
+                      <div className="h-3 bg-slate-100 rounded w-3/4" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Placed Fields */}
+              {fields.map(field => {
+                const fieldType = fieldTypes.find(f => f.id === field.type);
+
+                // Get color based on assigned party/role
+                const colors = [
+                  { border: 'border-indigo-400', bg: 'bg-indigo-50' },
+                  { border: 'border-emerald-400', bg: 'bg-emerald-50' },
+                  { border: 'border-purple-400', bg: 'bg-purple-50' },
+                  { border: 'border-amber-400', bg: 'bg-amber-50' },
+                ];
+                const roleIndex = parseInt(field.role) - 1;
+                const colorScheme = colors[roleIndex % colors.length] || colors[0];
+                const roleColor = `${colorScheme.border} ${colorScheme.bg}`;
+
+                return (
+                  <div
+                    key={field.id}
+                    className={cn(
+                      'absolute border-2 border-dashed rounded cursor-move flex items-center justify-center transition-all group',
+                      roleColor,
+                      selectedField === field.id && 'ring-2 ring-indigo-500 ring-offset-2'
+                    )}
+                    style={{
+                      left: field.x * (zoom / 100),
+                      top: field.y * (zoom / 100),
+                      width: field.width * (zoom / 100),
+                      height: field.height * (zoom / 100),
+                    }}
+                    onClick={() => setSelectedField(field.id)}
+                    onMouseDown={(e) => handleFieldMouseDown(e, field.id)}
+                  >
+                    <div className="flex flex-col items-center gap-1 pointer-events-none px-2 text-center">
+                      {fieldType && <fieldType.icon className="w-4 h-4 text-slate-500" />}
+                      <span className="text-xs font-medium text-slate-600 line-clamp-2">
+                        {field.placeholder || fieldType?.label}
+                      </span>
+                    </div>
+
+                    {/* Resize Handle */}
+                    <div
+                      className="absolute bottom-0 right-0 w-4 h-4 bg-indigo-600 rounded-tl cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                      onMouseDown={(e) => handleResizeStart(e, field.id)}
+                    >
+                      <div className="absolute bottom-0.5 right-0.5 w-2 h-2 border-r-2 border-b-2 border-white" />
+                    </div>
+
+                    {selectedField === field.id && (
+                      <div className="absolute -top-8 right-0 flex items-center gap-1 bg-white rounded shadow-lg p-1">
+                        <Button variant="ghost" size="icon" className="w-6 h-6">
+                          <Move className="w-3 h-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="w-6 h-6">
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-6 h-6 text-red-500"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateFields(fields.filter(f => f.id !== field.id));
+                            setSelectedField(null);
+                          }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Right Panel - Field Properties */}
+      <div className="w-72 bg-white border-l border-slate-200 p-4">
+        <h3 className="font-semibold text-slate-900 mb-4">Field Properties</h3>
+        
+        {selectedField ? (
+          <div className="space-y-4">
+            {(() => {
+              const field = fields.find(f => f.id === selectedField);
+              if (!field) return null;
+
+              return (
+                <>
+                  <div className="space-y-2">
+                    <Label>Field Type</Label>
+                    <Select
+                      value={field.type}
+                      onValueChange={(value) => updateField(selectedField, { type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fieldTypes.map(type => (
+                          <SelectItem key={type.id} value={type.id}>{type.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {parties.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Assigned Role</Label>
+                      <Select
+                        value={field.role || parties[0]?.id.toString()}
+                        onValueChange={(value) => updateField(selectedField, { role: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {parties.map((party) => (
+                            <SelectItem key={party.id} value={party.id.toString()}>
+                              {party.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Width (px)</Label>
+                      <Input
+                        type="number"
+                        value={Math.round(field.width)}
+                        onChange={(e) => updateField(selectedField, { width: parseInt(e.target.value) || 120 })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Height (px)</Label>
+                      <Input
+                        type="number"
+                        value={Math.round(field.height)}
+                        onChange={(e) => updateField(selectedField, { height: parseInt(e.target.value) || 30 })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Label>Required</Label>
+                    <Switch
+                      checked={field.required !== false}
+                      onCheckedChange={(checked) => updateField(selectedField, { required: checked })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Label/Placeholder</Label>
+                    <Input
+                      value={field.placeholder || ''}
+                      onChange={(e) => updateField(selectedField, { placeholder: e.target.value })}
+                      placeholder="e.g., Sign here..."
+                    />
+                  </div>
+
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => {
+                      updateFields(fields.filter(f => f.id !== selectedField));
+                      setSelectedField(null);
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Field
+                  </Button>
+                </>
+              );
+            })()}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+              <Move className="w-6 h-6 text-slate-400" />
+            </div>
+            <p className="text-sm text-slate-500">Select a field to edit its properties</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
