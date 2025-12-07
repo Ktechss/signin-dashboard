@@ -106,9 +106,6 @@ export default function JourneyDetail() {
               <StatusBadge status={journeyData.status} />
             </div>
           </div>
-          <Button className="bg-slate-800 hover:bg-slate-900 text-white">
-            View Certificate
-          </Button>
         </div>
 
         {/* Journey Info Card */}

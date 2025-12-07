@@ -376,7 +376,8 @@ export default function TemplateBuilder() {
       {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-8">
+            {/* Left: Back button and Title */}
             <div className="flex items-center gap-4">
               <Link to={createPageUrl('Templates')}>
                 <Button variant="ghost" size="icon">
@@ -388,48 +389,9 @@ export default function TemplateBuilder() {
                 <p className="text-sm text-slate-500">Step {currentStep + 1} of {steps.length}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={handleSaveAsDraft}>Save as Draft</Button>
-              {currentStep === steps.length - 1 ? (
-                <Button className="gap-2 bg-slate-900 hover:bg-slate-800" onClick={handleActivateTemplate}>
-                  <CheckCircle2 className="w-4 h-4" />
-                  Activate Blueprint
-                </Button>
-              ) : (
-                <Button
-                  className="gap-2 bg-slate-900 hover:bg-slate-800"
-                  onClick={() => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1))}
-                >
-                  Continue
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Content */}
-      <div className="p-6 lg:p-8 pb-24">
-        {renderStepContent()}
-      </div>
-      
-      {/* Footer Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-3 px-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
-          {/* Previous Button */}
-          <Button
-            variant="outline"
-            onClick={() => setCurrentStep(prev => Math.max(prev - 1, 0))}
-            disabled={currentStep === 0}
-            className="min-w-24"
-          >
-            Previous
-          </Button>
-
-          {/* Progress Stepper - Compact */}
-          <div className="flex-1 max-w-3xl">
-            <div className="flex items-center justify-center gap-2">
+            {/* Center: Progress Stepper */}
+            <div className="flex items-center gap-2 flex-1 justify-center">
               {steps.map((step, index) => (
                 <React.Fragment key={step.id}>
                   <button
@@ -457,16 +419,50 @@ export default function TemplateBuilder() {
                 </React.Fragment>
               ))}
             </div>
-          </div>
 
-          {/* Next Button */}
+            {/* Right: Save as Draft button */}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handleSaveAsDraft}>Save as Draft</Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-6 lg:p-8 pb-24">
+        {renderStepContent()}
+      </div>
+      
+      {/* Footer Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-3 px-6">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
+          {/* Previous Button */}
           <Button
-            className="bg-slate-900 hover:bg-slate-800 min-w-24"
-            onClick={() => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1))}
-            disabled={currentStep === steps.length - 1}
+            variant="outline"
+            onClick={() => setCurrentStep(prev => Math.max(prev - 1, 0))}
+            disabled={currentStep === 0}
+            className="min-w-24"
           >
-            Next Step
+            Previous
           </Button>
+
+          {/* Next/Activate Button */}
+          {currentStep === steps.length - 1 ? (
+            <Button
+              className="gap-2 bg-slate-900 hover:bg-slate-800 min-w-24"
+              onClick={handleActivateTemplate}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Activate Blueprint
+            </Button>
+          ) : (
+            <Button
+              className="bg-slate-900 hover:bg-slate-800 min-w-24"
+              onClick={() => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1))}
+            >
+              Next Step
+            </Button>
+          )}
         </div>
       </div>
     </div>
