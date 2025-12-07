@@ -13,7 +13,8 @@ import {
   Trash2,
   Copy,
   Users,
-  Upload
+  Upload,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +31,13 @@ import { Switch } from '@/components/ui/switch';
 // Configure PDF.js worker to match react-pdf's version
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
+// Only signature for left sidebar
 const fieldTypes = [
+  { id: 'signature', icon: Pen, label: 'Signature', color: 'bg-indigo-500' },
+];
+
+// All field types for the dropdown selector
+const allFieldTypes = [
   { id: 'signature', icon: Pen, label: 'Signature', color: 'bg-indigo-500' },
   { id: 'initials', icon: Type, label: 'Initials', color: 'bg-purple-500' },
   { id: 'date', icon: Calendar, label: 'Date', color: 'bg-emerald-500' },
@@ -135,12 +142,48 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
     setDraggingField(null);
     setIsResizing(false);
   };
-  
+
+  // Copy a signature field
+  const copyField = (fieldId) => {
+    const fieldToCopy = fields.find(f => f.id === fieldId);
+    if (fieldToCopy) {
+      const newField = {
+        ...fieldToCopy,
+        id: Date.now(),
+        x: fieldToCopy.x + 20, // Offset slightly so it's visible
+        y: fieldToCopy.y + 20,
+      };
+      updateFields([...fields, newField]);
+      setSelectedField(newField.id);
+    }
+  };
+
+  // Add a new signature field at center of canvas
+  const addSignature = () => {
+    const signatureFields = fields.filter(f => f.type === 'signature');
+    const nextPartyIndex = signatureFields.length;
+    const assignedRole = (nextPartyIndex + 1).toString();
+
+    const newSignature = {
+      id: Date.now(),
+      type: 'signature',
+      x: 200,
+      y: 400,
+      width: 180,
+      height: 60,
+      role: assignedRole,
+      required: true,
+    };
+
+    updateFields([...fields, newSignature]);
+    setSelectedField(newSignature.id);
+  };
+
   return (
     <div className={cn('flex h-[700px] bg-slate-50 rounded-xl overflow-hidden border border-slate-200', className)}>
-      {/* Left Panel - Field Types */}
+      {/* Left Panel - Signature Tool */}
       <div className="w-64 bg-white border-r border-slate-200 p-4">
-        <h3 className="font-semibold text-slate-900 mb-4">Field Types</h3>
+        <h3 className="font-semibold text-slate-900 mb-4">Signature</h3>
         <div className="space-y-2">
           {fieldTypes.map(field => (
             <div
@@ -155,6 +198,9 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
               <span className="text-sm font-medium text-slate-700">{field.label}</span>
             </div>
           ))}
+          <p className="text-xs text-slate-500 mt-4">
+            Drag and drop signature field onto the document, or use the + button at bottom right
+          </p>
         </div>
         
         {parties.length > 0 && (
@@ -203,7 +249,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
         </div>
         
         {/* Canvas */}
-        <div className="flex-1 overflow-auto p-6 flex items-center justify-center">
+        <div className="flex-1 overflow-auto p-6 flex items-center justify-center relative">
           {!documentPreview?.data ? (
             <div className="text-center py-12 max-w-md">
               <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
@@ -264,7 +310,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                     >
                       <Page
                         pageNumber={1}
-                        width={595}
+                        width={595 * (zoom / 100)}
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
                       />
@@ -274,7 +320,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                   <img
                     src={documentPreview.data}
                     alt="Document"
-                    className="absolute inset-0 w-full h-full object-cover rounded pointer-events-none"
+                    className="absolute inset-0 w-full h-full object-contain rounded pointer-events-none"
                     draggable={false}
                   />
                 )
@@ -298,7 +344,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
 
               {/* Placed Fields */}
               {fields.map(field => {
-                const fieldType = fieldTypes.find(f => f.id === field.type);
+                const fieldType = allFieldTypes.find(f => f.id === field.type);
 
                 // Get color based on assigned party/role
                 const colors = [
@@ -344,11 +390,17 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                     </div>
 
                     {selectedField === field.id && (
-                      <div className="absolute -top-8 right-0 flex items-center gap-1 bg-white rounded shadow-lg p-1">
-                        <Button variant="ghost" size="icon" className="w-6 h-6">
-                          <Move className="w-3 h-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="w-6 h-6">
+                      <div className="absolute -top-8 right-0 flex items-center gap-1 bg-white rounded shadow-lg p-1 z-10">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-6 h-6"
+                          title="Copy signature"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyField(field.id);
+                          }}
+                        >
                           <Copy className="w-3 h-3" />
                         </Button>
                         <Button
@@ -370,9 +422,21 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
               })}
             </div>
           )}
+
+          {/* Add Signature Button - Bottom Right */}
+          {documentPreview?.data && (
+            <Button
+              onClick={addSignature}
+              className="absolute bottom-6 right-6 rounded-full w-12 h-12 bg-indigo-600 hover:bg-indigo-700 shadow-lg z-20"
+              size="icon"
+              title="Add new signature"
+            >
+              <Plus className="w-5 h-5" />
+            </Button>
+          )}
         </div>
       </div>
-      
+
       {/* Right Panel - Field Properties */}
       <div className="w-72 bg-white border-l border-slate-200 p-4">
         <h3 className="font-semibold text-slate-900 mb-4">Field Properties</h3>
@@ -395,7 +459,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {fieldTypes.map(type => (
+                        {allFieldTypes.map(type => (
                           <SelectItem key={type.id} value={type.id}>{type.label}</SelectItem>
                         ))}
                       </SelectContent>

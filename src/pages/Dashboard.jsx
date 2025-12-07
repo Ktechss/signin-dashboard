@@ -1,11 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { 
-  FileText, 
-  CheckCircle2, 
-  Clock, 
-  AlertCircle, 
+import {
+  FileText,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
   TrendingUp,
   ArrowRight,
   Bell,
@@ -165,7 +165,7 @@ export default function Dashboard() {
           <div className="bg-white rounded-xl border border-slate-200/60 p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-2 h-2 rounded-full bg-amber-500" />
-              <span className="text-sm text-slate-500">Active Templates</span>
+              <span className="text-sm text-slate-500">Active Blueprints</span>
             </div>
             <p className="text-2xl font-bold text-slate-900">24</p>
           </div>

@@ -34,11 +34,8 @@ import FieldPlacement from '@/components/templates/FieldPlacement';
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 const steps = [
-  { id: 'info', title: 'Basic Info', description: 'Template details' },
-  { id: 'upload', title: 'Upload Document', description: 'PDF or DOCX' },
-  { id: 'fields', title: 'Signature Fields', description: 'Place fields' },
-  { id: 'parties', title: 'Party Configuration', description: 'Define roles' },
-  { id: 'review', title: 'Review & Activate', description: 'Final check' },
+  { id: 'info', title: 'Basic Info & Upload', description: 'Blueprint details and document' },
+  { id: 'fields', title: 'Signature Placement', description: 'Place signature fields' },
 ];
 
 export default function TemplateBuilder() {
@@ -47,8 +44,6 @@ export default function TemplateBuilder() {
   const [templateData, setTemplateData] = useState({
     name: '',
     description: '',
-    category: '',
-    tags: [],
   });
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedPreview, setUploadedPreview] = useState(null);
@@ -166,12 +161,12 @@ export default function TemplateBuilder() {
 
   const handleActivateTemplate = () => {
     try {
-      // Save template to localStorage
+      // Save blueprint to localStorage
       const template = saveTemplate({
-        name: templateData.name || 'Untitled Template',
+        name: templateData.name || 'Untitled Blueprint',
         description: templateData.description,
-        category: templateData.category,
-        tags: templateData.tags,
+        category: 'general',
+        tags: [],
         status: 'active',
         version: '1.0',
         fileName: uploadedFile?.name,
@@ -183,20 +178,20 @@ export default function TemplateBuilder() {
         lastModified: 'Just now'
       });
 
-      console.log('Template activated:', template);
+      console.log('Blueprint activated:', template);
 
       // Show success message
-      toast.success('Template activated successfully!', {
+      toast.success('Blueprint activated successfully!', {
         description: `"${template.name}" is now active and ready to use.`
       });
 
-      // Navigate back to templates page after a brief delay
+      // Navigate back to blueprints page after a brief delay
       setTimeout(() => {
         navigate(createPageUrl('Templates'));
       }, 1000);
     } catch (error) {
-      console.error('Error saving template:', error);
-      toast.error('Failed to activate template', {
+      console.error('Error saving blueprint:', error);
+      toast.error('Failed to activate blueprint', {
         description: 'Please try again.'
       });
     }
@@ -204,12 +199,12 @@ export default function TemplateBuilder() {
 
   const handleSaveAsDraft = () => {
     try {
-      // Save template as draft to localStorage
+      // Save blueprint as draft to localStorage
       const template = saveTemplate({
-        name: templateData.name || 'Untitled Template',
+        name: templateData.name || 'Untitled Blueprint',
         description: templateData.description,
-        category: templateData.category,
-        tags: templateData.tags,
+        category: 'general',
+        tags: [],
         status: 'draft',
         version: '0.1',
         fileName: uploadedFile?.name,
@@ -222,20 +217,20 @@ export default function TemplateBuilder() {
         lastModified: 'Just now'
       });
 
-      console.log('Template saved as draft:', template);
+      console.log('Blueprint saved as draft:', template);
 
       // Show success message
-      toast.success('Template saved as draft!', {
+      toast.success('Blueprint saved as draft!', {
         description: 'You can continue editing it later.'
       });
 
-      // Navigate back to templates page after a brief delay
+      // Navigate back to blueprints page after a brief delay
       setTimeout(() => {
         navigate(createPageUrl('Templates'));
       }, 1000);
     } catch (error) {
       console.error('Error saving draft:', error);
-      toast.error('Failed to save draft', {
+      toast.error('Failed to save blueprint draft', {
         description: 'Please try again.'
       });
     }
@@ -245,144 +240,123 @@ export default function TemplateBuilder() {
     switch (currentStep) {
       case 0:
         return (
-          <div className="max-w-2xl mx-auto space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="name">Template Name *</Label>
-              <Input 
-                id="name"
-                placeholder="e.g., Sales Agreement"
-                value={templateData.name}
-                onChange={(e) => setTemplateData({ ...templateData, name: e.target.value })}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea 
-                id="description"
-                placeholder="Describe what this template is used for..."
-                rows={4}
-                value={templateData.description}
-                onChange={(e) => setTemplateData({ ...templateData, description: e.target.value })}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="category">Category *</Label>
-              <Select 
-                value={templateData.category}
-                onValueChange={(value) => setTemplateData({ ...templateData, category: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="legal">Legal</SelectItem>
-                  <SelectItem value="commercial">Commercial</SelectItem>
-                  <SelectItem value="hr">Human Resources</SelectItem>
-                  <SelectItem value="finance">Finance</SelectItem>
-                  <SelectItem value="procurement">Procurement</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Tags</Label>
-              <Input placeholder="Add tags separated by commas..." />
-              <p className="text-xs text-slate-500">Tags help organize and find templates quickly</p>
-            </div>
-          </div>
-        );
-        
-      case 1:
-        return (
-          <div className="max-w-2xl mx-auto">
-            {!uploadedFile ? (
-              <label className="block">
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  accept="image/*,.pdf"
-                  onChange={handleFileUpload}
+          <div className="max-w-4xl mx-auto space-y-6">
+            {/* Basic Info Section */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
+              <h3 className="font-semibold text-slate-900">Blueprint Information</h3>
+
+              <div className="space-y-2">
+                <Label htmlFor="name">Blueprint Name *</Label>
+                <Input
+                  id="name"
+                  placeholder="e.g., Sales Agreement"
+                  value={templateData.name}
+                  onChange={(e) => setTemplateData({ ...templateData, name: e.target.value })}
                 />
-                <div className="border-2 border-dashed border-slate-200 rounded-xl p-12 text-center hover:border-slate-400 hover:bg-slate-50 transition-colors cursor-pointer">
-                  <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                    <Upload className="w-8 h-8 text-slate-700" />
-                  </div>
-                  <h3 className="font-semibold text-slate-900 mb-2">Upload your document</h3>
-                  <p className="text-sm text-slate-500 mb-4">
-                    Drag and drop your PDF or Image file here, or click to browse
-                  </p>
-                  <Button variant="outline" type="button">Browse Files</Button>
-                  <p className="text-xs text-slate-400 mt-4">Supported: PDF, JPG, PNG • Max size: 25MB</p>
-                </div>
-              </label>
-            ) : (
-              <div className="space-y-6">
-                {/* File Info */}
-                <div className="p-4 bg-slate-50 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-slate-700" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-900">{uploadedFile.name}</p>
-                      <p className="text-sm text-slate-500">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-slate-400 hover:text-red-600"
-                    onClick={() => {
-                      setUploadedFile(null);
-                      setUploadedPreview(null);
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-                
-                {/* Preview */}
-                {uploadedPreview && (
-                  <div className="border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="bg-slate-100 px-4 py-2 border-b border-slate-200">
-                      <span className="text-sm font-medium text-slate-700">Document Preview</span>
-                    </div>
-                    <div className="p-4 bg-slate-50 max-h-[500px] overflow-auto">
-                      {uploadedPreview.type === 'application/pdf' ? (
-                        <Document
-                          file={uploadedPreview.data}
-                          onLoadError={(error) => {
-                            console.error('PDF load error:', error);
-                            toast.error('Failed to load PDF');
-                          }}
-                          loading={<div className="text-center p-4">Loading PDF...</div>}
-                        >
-                          <Page
-                            pageNumber={1}
-                            width={500}
-                            renderTextLayer={false}
-                            renderAnnotationLayer={false}
-                          />
-                        </Document>
-                      ) : (
-                        <img
-                          src={uploadedPreview.data}
-                          alt="Document preview"
-                          className="w-full rounded shadow-sm"
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
-            )}
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe what this blueprint is used for..."
+                  rows={4}
+                  value={templateData.description}
+                  onChange={(e) => setTemplateData({ ...templateData, description: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Upload Section */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
+              <h3 className="font-semibold text-slate-900">Upload Document</h3>
+
+              {!uploadedFile ? (
+                <label className="block">
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*,.pdf"
+                    onChange={handleFileUpload}
+                  />
+                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-12 text-center hover:border-slate-400 hover:bg-slate-50 transition-colors cursor-pointer">
+                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                      <Upload className="w-8 h-8 text-slate-700" />
+                    </div>
+                    <h3 className="font-semibold text-slate-900 mb-2">Upload your document</h3>
+                    <p className="text-sm text-slate-500 mb-4">
+                      Drag and drop your PDF or Image file here, or click to browse
+                    </p>
+                    <Button variant="outline" type="button">Browse Files</Button>
+                    <p className="text-xs text-slate-400 mt-4">Supported: PDF, JPG, PNG • Max size: 25MB</p>
+                  </div>
+                </label>
+              ) : (
+                <div className="space-y-4">
+                  {/* File Info */}
+                  <div className="p-4 bg-slate-50 rounded-lg flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-slate-700" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">{uploadedFile.name}</p>
+                        <p className="text-sm text-slate-500">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-slate-400 hover:text-red-600"
+                      onClick={() => {
+                        setUploadedFile(null);
+                        setUploadedPreview(null);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  {/* Preview */}
+                  {uploadedPreview && (
+                    <div className="border border-slate-200 rounded-xl overflow-hidden">
+                      <div className="bg-slate-100 px-4 py-2 border-b border-slate-200">
+                        <span className="text-sm font-medium text-slate-700">Document Preview</span>
+                      </div>
+                      <div className="p-4 bg-slate-50 max-h-[500px] overflow-auto">
+                        {uploadedPreview.type === 'application/pdf' ? (
+                          <Document
+                            file={uploadedPreview.data}
+                            onLoadError={(error) => {
+                              console.error('PDF load error:', error);
+                              toast.error('Failed to load PDF');
+                            }}
+                            loading={<div className="text-center p-4">Loading PDF...</div>}
+                          >
+                            <Page
+                              pageNumber={1}
+                              width={500}
+                              renderTextLayer={false}
+                              renderAnnotationLayer={false}
+                            />
+                          </Document>
+                        ) : (
+                          <img
+                            src={uploadedPreview.data}
+                            alt="Document preview"
+                            className="w-full rounded shadow-sm"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         );
-        
-      case 2:
+
+      case 1:
         return (
           <FieldPlacement
             className="mx-auto"
@@ -390,150 +364,6 @@ export default function TemplateBuilder() {
             onFieldsChange={setTemplateFields}
             parties={parties}
           />
-        );
-        
-      case 3:
-        return (
-          <div className="max-w-3xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-slate-900">Party Roles</h3>
-                <p className="text-sm text-slate-500">Define who needs to sign this document</p>
-              </div>
-              <Button variant="outline" className="gap-2" onClick={addParty}>
-                <Plus className="w-4 h-4" />
-                Add Role
-              </Button>
-            </div>
-            
-            <div className="space-y-3">
-              {parties.map((party, index) => (
-                <div key={party.id} className="bg-white rounded-xl border border-slate-200 p-4">
-                  <div className="flex items-start gap-4">
-                    <div className="flex items-center gap-2 text-slate-400 cursor-move">
-                      <GripVertical className="w-5 h-5" />
-                      <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-sm font-medium">
-                        {index + 1}
-                      </span>
-                    </div>
-                    
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div className="space-y-2">
-                        <Label>Role Name</Label>
-                        <Input 
-                          value={party.name}
-                          onChange={(e) => {
-                            const updated = [...parties];
-                            updated[index].name = e.target.value;
-                            setParties(updated);
-                          }}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Min Count</Label>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          value={party.minCount}
-                          onChange={(e) => {
-                            const updated = [...parties];
-                            updated[index].minCount = parseInt(e.target.value);
-                            setParties(updated);
-                          }}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Max Count</Label>
-                        <Input 
-                          type="number" 
-                          min="1" 
-                          value={party.maxCount}
-                          onChange={(e) => {
-                            const updated = [...parties];
-                            updated[index].maxCount = parseInt(e.target.value);
-                            setParties(updated);
-                          }}
-                        />
-                      </div>
-                      
-                      <div className="flex items-end gap-4">
-                        <div className="flex items-center gap-2">
-                          <Switch 
-                            checked={party.required}
-                            onCheckedChange={(checked) => {
-                              const updated = [...parties];
-                              updated[index].required = checked;
-                              setParties(updated);
-                            }}
-                          />
-                          <Label>Required</Label>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-slate-400 hover:text-red-600"
-                      onClick={() => removeParty(party.id)}
-                      disabled={parties.length <= 1}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <p className="text-sm text-amber-800">
-                <strong>Signing Order:</strong> Parties will be asked to sign in the order shown above. 
-                Drag and drop to reorder.
-              </p>
-            </div>
-          </div>
-        );
-        
-      case 4:
-        return (
-          <div className="max-w-2xl mx-auto space-y-6">
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h3 className="font-semibold text-slate-900 mb-4">Template Summary</h3>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                  <span className="text-slate-500">Name</span>
-                  <span className="font-medium text-slate-900">{templateData.name || 'Untitled Template'}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                  <span className="text-slate-500">Category</span>
-                  <span className="font-medium text-slate-900">{templateData.category || 'Not set'}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                  <span className="text-slate-500">Document</span>
-                  <span className="font-medium text-slate-900">contract-template.pdf (3 pages)</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                  <span className="text-slate-500">Signature Fields</span>
-                  <span className="font-medium text-slate-900">4 fields</span>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-slate-500">Party Roles</span>
-                  <span className="font-medium text-slate-900">{parties.length} roles defined</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5" />
-              <div>
-                <p className="font-medium text-emerald-800">Template is ready to activate</p>
-                <p className="text-sm text-emerald-700">All required fields have been configured. You can activate this template now or save it as a draft.</p>
-              </div>
-            </div>
-          </div>
         );
         
       default:
@@ -554,7 +384,7 @@ export default function TemplateBuilder() {
                 </Button>
               </Link>
               <div>
-                <h1 className="font-semibold text-slate-900">Create Template</h1>
+                <h1 className="font-semibold text-slate-900">Create Blueprint</h1>
                 <p className="text-sm text-slate-500">Step {currentStep + 1} of {steps.length}</p>
               </div>
             </div>
@@ -563,7 +393,7 @@ export default function TemplateBuilder() {
               {currentStep === steps.length - 1 ? (
                 <Button className="gap-2 bg-slate-900 hover:bg-slate-800" onClick={handleActivateTemplate}>
                   <CheckCircle2 className="w-4 h-4" />
-                  Activate Template
+                  Activate Blueprint
                 </Button>
               ) : (
                 <Button

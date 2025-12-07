@@ -24,18 +24,40 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TemplateCard from '@/components/templates/TemplateCard';
 import EmptyState from '@/components/ui-custom/EmptyState';
 
-// No more mock data - only user-created templates
+// Demo mode - set to true to use only sample blueprints (for Vercel demo)
+const DEMO_MODE = true;
 
 export default function Templates() {
   const [viewMode, setViewMode] = useState('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [userTemplates, setUserTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load templates from localStorage
+  // Load blueprints (from JSON file in demo mode, or localStorage in production)
   useEffect(() => {
-    const savedTemplates = getTemplates();
-    setUserTemplates(savedTemplates);
+    const loadBlueprints = async () => {
+      setLoading(true);
+      try {
+        if (DEMO_MODE) {
+          // Demo mode: Load from public JSON file (visible to all visitors)
+          const response = await fetch('/sample-blueprints.json');
+          const sampleBlueprints = await response.json();
+          setUserTemplates(sampleBlueprints);
+        } else {
+          // Production mode: Load from localStorage (per-user)
+          const savedTemplates = getTemplates();
+          setUserTemplates(savedTemplates);
+        }
+      } catch (error) {
+        console.error('Error loading blueprints:', error);
+        setUserTemplates([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBlueprints();
   }, []);
 
   const filteredTemplates = userTemplates.filter(template => {
@@ -51,8 +73,8 @@ export default function Templates() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Templates</h1>
-            <p className="text-slate-500 mt-1">Create and manage your document templates.</p>
+            <h1 className="text-2xl font-bold text-slate-900">Blueprints</h1>
+            <p className="text-slate-500 mt-1">Create and manage your document blueprints.</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" className="gap-2">
@@ -62,7 +84,7 @@ export default function Templates() {
             <Link to={createPageUrl('TemplateBuilder')}>
               <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
                 <Plus className="w-4 h-4" />
-                Create Template
+                Create Blueprint
               </Button>
             </Link>
           </div>
@@ -82,8 +104,8 @@ export default function Templates() {
           <div className="flex items-center gap-3">
             <div className="relative w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input 
-                placeholder="Search templates..."
+              <Input
+                placeholder="Search blueprints..."
                 className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -126,10 +148,10 @@ export default function Templates() {
         
         {/* Templates Grid */}
         {filteredTemplates.length === 0 ? (
-          <EmptyState 
-            title="No templates found"
-            description="Create your first template to start generating contracts."
-            actionLabel="Create Template"
+          <EmptyState
+            title="No blueprints found"
+            description="Create your first blueprint to start generating contracts."
+            actionLabel="Create Blueprint"
             onAction={() => {}}
           />
         ) : (

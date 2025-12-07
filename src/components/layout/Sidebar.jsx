@@ -22,16 +22,15 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 
 const navigation = [
   { name: 'Dashboard', icon: LayoutDashboard, href: 'Dashboard' },
-  { 
-    name: 'Current', 
-    icon: FileText, 
+  {
+    name: 'Current',
+    icon: FileText,
     children: [
       { name: 'Contracts', href: 'Contracts' },
       { name: 'Journeys', href: 'Journeys' },
     ]
   },
-  { name: 'Templates', icon: Layers, href: 'Templates' },
-  { name: 'Sign Contract', icon: PenTool, href: 'SignContract' },
+  { name: 'Blueprints', icon: Layers, href: 'Templates' },
 ];
 
 export default function Sidebar({ currentPage, isAdmin = true }) {
