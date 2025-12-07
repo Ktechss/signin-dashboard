@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { getTemplateById } from '@/utils/templateStorage';
-import { 
-  ArrowLeft, 
-  FileText, 
-  Edit, 
-  Copy, 
-  Archive, 
+import { Document, Page, pdfjs } from 'react-pdf';
+import {
+  ArrowLeft,
+  FileText,
+  Edit,
+  Copy,
+  Archive,
   Download,
   Clock,
   Users,
@@ -30,6 +31,9 @@ import {
 import StatusBadge from '@/components/ui-custom/StatusBadge';
 import DocumentViewer from '@/components/ui-custom/DocumentViewer';
 
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
 export default function TemplateDetail() {
   const [searchParams] = useSearchParams();
   const templateId = searchParams.get('id');
@@ -37,11 +41,30 @@ export default function TemplateDetail() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (templateId) {
-      const loadedTemplate = getTemplateById(templateId);
-      setTemplate(loadedTemplate);
-      setLoading(false);
-    }
+    const loadTemplate = async () => {
+      if (templateId) {
+        try {
+          // First try to load from localStorage
+          let loadedTemplate = getTemplateById(templateId);
+
+          // If not found in localStorage, try loading from sample blueprints
+          if (!loadedTemplate) {
+            const response = await fetch('/sample-blueprints.json');
+            const sampleBlueprints = await response.json();
+            loadedTemplate = sampleBlueprints.find(t => t.id.toString() === templateId.toString());
+          }
+
+          setTemplate(loadedTemplate);
+        } catch (error) {
+          console.error('Error loading template:', error);
+          setTemplate(null);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadTemplate();
   }, [templateId]);
 
   if (loading) {
@@ -156,50 +179,75 @@ export default function TemplateDetail() {
                 </Button>
               </div>
               <div className="p-4 bg-slate-50">
-                {template.filePreview || template.preview ? (
-                  <div className="relative inline-block">
-                    <img
-                      src={template.filePreview || template.preview}
-                      alt={template.name}
-                      className="w-full rounded-lg shadow-sm border border-slate-200"
-                    />
-                    {/* Render saved field overlays */}
-                    {template.fields && template.fields.map((field, index) => {
-                      const fieldTypes = {
-                        signature: { icon: '✍️', color: 'indigo' },
-                        initials: { icon: '📝', color: 'purple' },
-                        date: { icon: '📅', color: 'emerald' },
-                        text: { icon: '📄', color: 'blue' },
-                        checkbox: { icon: '☑️', color: 'amber' },
-                        number: { icon: '#️⃣', color: 'rose' },
-                      };
-
-                      const fieldInfo = fieldTypes[field.type] || fieldTypes.text;
-                      const colors = [
-                        { border: 'border-slate-400', bg: 'bg-slate-100/70', text: 'text-slate-700' },
-                        { border: 'border-slate-500', bg: 'bg-slate-200/70', text: 'text-slate-800' },
-                        { border: 'border-slate-600', bg: 'bg-slate-300/70', text: 'text-slate-900' },
-                        { border: 'border-slate-400', bg: 'bg-slate-100/70', text: 'text-slate-700' },
-                      ];
-                      const colorScheme = colors[index % colors.length];
-
-                      return (
-                        <div
-                          key={field.id}
-                          className={`absolute border-2 border-dashed ${colorScheme.border} ${colorScheme.bg} rounded flex items-center justify-center`}
-                          style={{
-                            left: `${(field.x / 595) * 100}%`,
-                            top: `${(field.y / 842) * 100}%`,
-                            width: `${(field.width / 595) * 100}%`,
-                            height: `${(field.height / 842) * 100}%`,
+                {(template.documentData || template.filePreview || template.preview) ? (
+                  <div className="flex justify-center">
+                    <div className="relative inline-block">
+                      {template.documentData?.type === 'application/pdf' ? (
+                        // Render PDF using react-pdf
+                        <Document
+                          file={template.documentData.data}
+                          onLoadError={(error) => {
+                            console.error('PDF load error:', error);
                           }}
+                          loading={<div className="text-center p-8 text-slate-500">Loading PDF...</div>}
                         >
-                          <span className={`text-xs font-medium ${colorScheme.text}`}>
-                            {fieldInfo.icon} {field.type.charAt(0).toUpperCase() + field.type.slice(1)}
-                          </span>
-                        </div>
-                      );
-                    })}
+                          <Page
+                            pageNumber={1}
+                            width={600}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                            className="rounded-lg shadow-sm"
+                          />
+                        </Document>
+                      ) : (
+                        // Render image (JPEG/PNG)
+                        <img
+                          src={template.filePreview || template.preview || template.documentData?.thumbnail}
+                          alt={template.name}
+                          className="max-w-full rounded-lg shadow-sm border border-slate-200"
+                          onError={(e) => {
+                            console.error('Failed to load image:', e);
+                          }}
+                        />
+                      )}
+                      {/* Render field overlays */}
+                      {template.fields && Array.isArray(template.fields) && template.fields.map((field, index) => {
+                        const fieldTypes = {
+                          signature: { icon: '✍️', color: 'indigo' },
+                          initials: { icon: '📝', color: 'purple' },
+                          date: { icon: '📅', color: 'emerald' },
+                          text: { icon: '📄', color: 'blue' },
+                          checkbox: { icon: '☑️', color: 'amber' },
+                          number: { icon: '#️⃣', color: 'rose' },
+                        };
+
+                        const fieldInfo = fieldTypes[field.type] || fieldTypes.text;
+                        const colors = [
+                          { border: 'border-indigo-400', bg: 'bg-indigo-100/70', text: 'text-indigo-700' },
+                          { border: 'border-purple-400', bg: 'bg-purple-100/70', text: 'text-purple-700' },
+                          { border: 'border-emerald-400', bg: 'bg-emerald-100/70', text: 'text-emerald-700' },
+                          { border: 'border-blue-400', bg: 'bg-blue-100/70', text: 'text-blue-700' },
+                        ];
+                        const colorScheme = colors[index % colors.length];
+
+                        return (
+                          <div
+                            key={field.id}
+                            className={`absolute border-2 border-dashed ${colorScheme.border} ${colorScheme.bg} rounded flex items-center justify-center`}
+                            style={{
+                              left: `${(field.x / 595) * 100}%`,
+                              top: `${(field.y / 842) * 100}%`,
+                              width: `${(field.width / 595) * 100}%`,
+                              height: `${(field.height / 842) * 100}%`,
+                            }}
+                          >
+                            <span className={`text-xs font-medium ${colorScheme.text}`}>
+                              {fieldInfo.icon} {field.type.charAt(0).toUpperCase() + field.type.slice(1)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : (
                   <DocumentViewer />
@@ -239,7 +287,7 @@ export default function TemplateDetail() {
             </div>
             
             {/* Party Roles */}
-            {template.parties && template.parties.length > 0 && (
+            {template.parties && Array.isArray(template.parties) && template.parties.length > 0 && (
               <div className="bg-white rounded-xl border border-slate-200/60 p-5">
                 <h3 className="font-semibold text-slate-900 mb-4">Party Roles</h3>
                 <div className="space-y-3">
@@ -269,7 +317,7 @@ export default function TemplateDetail() {
             )}
             
             {/* Signature Fields */}
-            {template.fields && template.fields.length > 0 && (
+            {template.fields && Array.isArray(template.fields) && template.fields.length > 0 && (
               <div className="bg-white rounded-xl border border-slate-200/60 p-5">
                 <h3 className="font-semibold text-slate-900 mb-4">Signature Fields</h3>
                 <div className="grid grid-cols-2 gap-3">

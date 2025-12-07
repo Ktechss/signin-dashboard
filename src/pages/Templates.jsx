@@ -24,9 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TemplateCard from '@/components/templates/TemplateCard';
 import EmptyState from '@/components/ui-custom/EmptyState';
 
-// Demo mode - set to true to use only sample blueprints (for Vercel demo)
-const DEMO_MODE = false;
-
 export default function Templates() {
   const [viewMode, setViewMode] = useState('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,24 +31,26 @@ export default function Templates() {
   const [userTemplates, setUserTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Load blueprints (from JSON file in demo mode, or localStorage in production)
+  // Load both sample blueprints AND localStorage templates
   useEffect(() => {
     const loadBlueprints = async () => {
       setLoading(true);
       try {
-        if (DEMO_MODE) {
-          // Demo mode: Load from public JSON file (visible to all visitors)
-          const response = await fetch('/sample-blueprints.json');
-          const sampleBlueprints = await response.json();
-          setUserTemplates(sampleBlueprints);
-        } else {
-          // Production mode: Load from localStorage (per-user)
-          const savedTemplates = getTemplates();
-          setUserTemplates(savedTemplates);
-        }
+        // Load sample blueprints from JSON file
+        const response = await fetch('/sample-blueprints.json');
+        const sampleBlueprints = await response.json();
+
+        // Load user-created templates from localStorage
+        const savedTemplates = getTemplates();
+
+        // Combine both arrays - sample blueprints first, then user templates
+        const allTemplates = [...sampleBlueprints, ...savedTemplates];
+        setUserTemplates(allTemplates);
       } catch (error) {
         console.error('Error loading blueprints:', error);
-        setUserTemplates([]);
+        // If sample blueprints fail to load, at least show localStorage templates
+        const savedTemplates = getTemplates();
+        setUserTemplates(savedTemplates);
       } finally {
         setLoading(false);
       }
