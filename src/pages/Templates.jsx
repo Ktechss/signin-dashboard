@@ -25,7 +25,7 @@ import TemplateCard from '@/components/templates/TemplateCard';
 import EmptyState from '@/components/ui-custom/EmptyState';
 
 // Demo mode - set to true to use only sample blueprints (for Vercel demo)
-const DEMO_MODE = true;
+const DEMO_MODE = false;
 
 export default function Templates() {
   const [viewMode, setViewMode] = useState('grid');
