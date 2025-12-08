@@ -2,6 +2,8 @@ import Layout from "./Layout.jsx";
 
 import Dashboard from "./Dashboard";
 
+import Current from "./Current";
+
 import Contracts from "./Contracts";
 
 import ContractDetail from "./ContractDetail";
@@ -29,9 +31,11 @@ import JourneyDetail from "./JourneyDetail";
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
-    
+
     Dashboard: Dashboard,
-    
+
+    Current: Current,
+
     Contracts: Contracts,
     
     ContractDetail: ContractDetail,
@@ -82,9 +86,11 @@ function PagesContent() {
                 
                     <Route path="/" element={<Dashboard />} />
                 
-                
+
                 <Route path="/Dashboard" element={<Dashboard />} />
-                
+
+                <Route path="/Current" element={<Current />} />
+
                 <Route path="/Contracts" element={<Contracts />} />
                 
                 <Route path="/ContractDetail" element={<ContractDetail />} />

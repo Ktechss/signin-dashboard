@@ -1,17 +1,23 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { 
-  ArrowLeft, 
-  FileText, 
-  Bell, 
+import {
+  ArrowLeft,
+  FileText,
+  Bell,
   Clock,
   Calendar,
   Copy,
   ExternalLink,
   CheckCircle2,
   Eye,
-  Key
+  Key,
+  Users,
+  Activity,
+  Download,
+  Mail,
+  Shield,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -33,7 +39,7 @@ const contract = {
   totalParties: 3,
 };
 
-// Mock linked journeys (separate from parties)
+// Mock linked signing requests (separate from parties)
 const linkedJourneys = [
   { token: 'TKN-8F2A-X9K1', status: 'authorised', date: 'Jan 16, 2024', device: 'Chrome on Windows' },
   { token: 'TKN-3B7C-M4P2', status: 'authorised', date: 'Jan 17, 2024', device: 'Safari on Mac' },
@@ -80,211 +86,241 @@ const activityLog = [
 
 export default function ContractDetail() {
   return (
-    <div className="min-h-screen bg-slate-50/50">
-      <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Header */}
-        <div className="flex items-start gap-4">
+        <div className="mb-8">
           <Link to={createPageUrl('Contracts')}>
-            <Button variant="ghost" size="icon" className="mt-1">
-              <ArrowLeft className="w-5 h-5" />
+            <Button variant="ghost" size="sm" className="gap-2 mb-6 -ml-2 hover:bg-slate-100">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Contracts
             </Button>
           </Link>
-          <div>
-            <p className="text-sm text-slate-500 font-mono">{contract.reference}</p>
-            <div className="flex items-center gap-3 mt-1">
-              <h1 className="text-2xl font-bold text-slate-900">{contract.name}</h1>
-              <StatusBadge status={contract.status} />
-            </div>
-          </div>
-        </div>
-        
-        {/* Contract Info & Document Details Row */}
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Contract Details - Left */}
-          <div className="bg-white rounded-xl border border-slate-200/60 p-5">
-            <h3 className="font-semibold text-slate-900 mb-4">Contract Details</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500 flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Contract Number
-                </span>
-                <span className="font-medium text-slate-700 flex items-center gap-1">
-                  {contract.reference}
-                  <Copy className="w-3.5 h-3.5 text-slate-400 cursor-pointer hover:text-slate-600" />
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500 flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Created On
-                </span>
-                <span className="font-medium text-slate-700">{contract.createdAt}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500 flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  Signing Expires
-                </span>
-                <span className="font-medium text-amber-600">{contract.expiresAt}</span>
-              </div>
-            </div>
-          </div>
 
-          {/* Document & Signing Status - Right */}
-          <div className="bg-white rounded-xl border border-slate-200/60 p-5">
-            <div className="flex items-start justify-between mb-4">
-              <h3 className="font-semibold text-slate-900">Document & Status</h3>
-              <div className="flex items-center gap-2">
-                <div className="text-center px-3 py-1.5 bg-emerald-50 rounded-lg">
-                  <div className="flex items-center gap-1 text-emerald-600">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span className="font-bold">{contract.signedCount}</span>
-                    <span className="text-xs">Signed</span>
+          <div className="bg-white rounded-2xl border border-slate-200 p-8">
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-slate-900">{contract.template}</h1>
+                    <div className="flex items-center gap-2 mt-1">
+                      <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono text-slate-600">
+                        {contract.reference}
+                      </code>
+                      <Copy className="w-3.5 h-3.5 text-slate-400 cursor-pointer hover:text-slate-600" />
+                    </div>
                   </div>
                 </div>
-                <div className="text-center px-3 py-1.5 bg-amber-50 rounded-lg">
-                  <div className="flex items-center gap-1 text-amber-600">
-                    <Clock className="w-4 h-4" />
-                    <span className="font-bold">{contract.totalParties - contract.signedCount}</span>
-                    <span className="text-xs">Pending</span>
-                  </div>
-                </div>
               </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">Template Used</span>
-                <span className="font-medium text-slate-700 text-right max-w-[60%]">{contract.template}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">Uploaded Document</span>
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-slate-400" />
-                  <span className="font-medium text-slate-700">{contract.documentName}</span>
-                </div>
-              </div>
-              <div className="pt-2">
-                <Button variant="outline" size="sm" className="gap-2 w-full">
+              <div className="flex items-center gap-3">
+                <StatusBadge status={contract.status} />
+                <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
                   <Eye className="w-4 h-4" />
                   View Document
                 </Button>
               </div>
             </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
+                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-slate-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Created</p>
+                  <p className="text-sm font-semibold text-slate-900">{contract.createdAt}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl">
+                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Expires</p>
+                  <p className="text-sm font-semibold text-amber-600">{contract.expiresAt}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-4 bg-emerald-50 rounded-xl">
+                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Signed</p>
+                  <p className="text-sm font-semibold text-emerald-600">{contract.signedCount} of {contract.totalParties}</p>
+                </div>
+              </div>
+
+              <div className="relative p-4 bg-slate-50 rounded-xl group hover:bg-slate-100 transition-colors overflow-hidden">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center flex-shrink-0">
+                    <Shield className="w-5 h-5 text-slate-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-slate-500">Template</p>
+                    <p className="text-sm font-semibold text-slate-900 truncate">{contract.template}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 flex-shrink-0"
+                    onClick={() => {/* View template logic */}}
+                  >
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        
-        {/* Tabs: Parties, Activity Log, Linked Journeys */}
-        <div className="bg-white rounded-xl border border-slate-200/60 overflow-hidden">
-          <Tabs defaultValue="parties" className="w-full">
-            <div className="border-b border-slate-100 px-5">
-              <TabsList className="bg-transparent h-12 p-0 gap-6">
-                <TabsTrigger 
-                  value="parties" 
-                  className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none px-0 pb-3 pt-3"
-                >
-                  Parties ({parties.length})
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="activity" 
-                  className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none px-0 pb-3 pt-3"
-                >
-                  Activity Log
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="journeys" 
-                  className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none px-0 pb-3 pt-3"
-                >
-                  Linked Journeys ({linkedJourneys.length})
-                </TabsTrigger>
-              </TabsList>
-            </div>
 
-            <TabsContent value="parties" className="m-0">
-              <div className="divide-y divide-slate-100">
+        {/* Tabs: Parties, Activity Log, Linked Signing Requests */}
+        <Tabs defaultValue="parties" className="w-full">
+          <TabsList className="bg-slate-100 rounded-xl p-1 gap-1">
+            <TabsTrigger
+              value="parties"
+              className="data-[state=active]:bg-white data-[state=active]:text-slate-900 rounded-lg px-4 py-2.5 text-slate-600 text-sm font-medium gap-2"
+            >
+              <Users className="w-4 h-4" />
+              Parties ({parties.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="activity"
+              className="data-[state=active]:bg-white data-[state=active]:text-slate-900 rounded-lg px-4 py-2.5 text-slate-600 text-sm font-medium gap-2"
+            >
+              <Activity className="w-4 h-4" />
+              Activity Log
+            </TabsTrigger>
+            <TabsTrigger
+              value="journeys"
+              className="data-[state=active]:bg-white data-[state=active]:text-slate-900 rounded-lg px-4 py-2.5 text-slate-600 text-sm font-medium gap-2"
+            >
+              <Key className="w-4 h-4" />
+              Signing Requests ({linkedJourneys.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="parties" className="m-0 mt-6">
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="divide-y divide-slate-200">
                 {parties.map(party => (
-                  <div key={party.id} className="p-5">
+                  <div key={party.id} className="p-6 hover:bg-slate-50 transition-colors">
                     <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm ${
-                          party.status === 'signed' ? 'bg-emerald-100 text-emerald-700' :
-                          party.status === 'failed' ? 'bg-red-100 text-red-700' :
-                          'bg-slate-100 text-slate-600'
+                      <div className="flex items-start gap-4 flex-1">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-sm font-semibold flex-shrink-0 ${
+                          party.status === 'signed' ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white' :
+                          party.status === 'failed' ? 'bg-gradient-to-br from-red-400 to-red-600 text-white' :
+                          'bg-gradient-to-br from-slate-300 to-slate-400 text-white'
                         }`}>
                           {party.name.split(' ').map(n => n[0]).join('')}
                         </div>
-                        <div>
-                          <h3 className="font-medium text-slate-900">{party.name}</h3>
-                          <p className="text-sm text-slate-500">{party.email}</p>
-                          <p className="text-xs text-slate-400 mt-1">Role: {party.role}</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Users className="w-3.5 h-3.5 text-slate-400" />
+                                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Signatory</p>
+                              </div>
+                              <p className="text-sm font-semibold text-slate-900 mb-1">{party.name}</p>
+                              <div className="flex items-center gap-1.5">
+                                <Mail className="w-3 h-3 text-slate-400" />
+                                <p className="text-xs text-slate-500">{party.email}</p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Shield className="w-3.5 h-3.5 text-slate-400" />
+                                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Role</p>
+                              </div>
+                              <p className="text-sm font-semibold text-slate-900">{party.role}</p>
+                            </div>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Signed At</p>
+                              </div>
+                              {party.signedAt ? (
+                                <p className="text-sm font-semibold text-slate-900">{party.signedAt}</p>
+                              ) : (
+                                <p className="text-sm text-slate-400">Not signed yet</p>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <StatusBadge status={party.status} size="sm" />
-                        {party.signedAt && (
-                          <p className="text-xs text-slate-400 mt-2">{party.signedAt}</p>
+                      <div className="flex flex-col gap-2 ml-4 flex-shrink-0 items-end">
+                        <StatusBadge status={party.status} />
+                        {party.status === 'pending' && (
+                          <button className="p-1 hover:bg-slate-100 rounded transition-colors cursor-pointer">
+                            <Bell className="w-4 h-4 text-slate-600" />
+                          </button>
                         )}
                       </div>
                     </div>
-
-                    {party.status === 'pending' && (
-                      <div className="mt-3 flex items-center gap-2">
-                        <Button size="sm" variant="outline" className="gap-1">
-                          <Bell className="w-3.5 h-3.5" />
-                          Remind
-                        </Button>
-                        <Button size="sm" variant="ghost" className="gap-1">
-                          <Copy className="w-3.5 h-3.5" />
-                          Copy Link
-                        </Button>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
-            </TabsContent>
+            </div>
+          </TabsContent>
 
-            <TabsContent value="activity" className="m-0 p-5">
-              <Timeline items={activityLog} />
-            </TabsContent>
+          <TabsContent value="activity" className="m-0 mt-6">
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="p-6">
+                <Timeline items={activityLog} />
+              </div>
+            </div>
+          </TabsContent>
 
-            <TabsContent value="journeys" className="m-0">
-              <div className="divide-y divide-slate-100">
-                {linkedJourneys.map((journey) => (
-                  <div 
-                    key={journey.token}
-                    className="flex items-center justify-between p-5"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center">
-                        <Key className="w-5 h-5 text-indigo-600" />
-                      </div>
-                      <div>
-                        <code className="text-sm bg-slate-100 px-2 py-1 rounded font-mono text-slate-700">
-                          {journey.token}
-                        </code>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
-                          <span>{journey.date}</span>
-                          <span>•</span>
-                          <span>{journey.device}</span>
+          <TabsContent value="journeys" className="m-0 mt-6">
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="p-6">
+                <div className="space-y-4">
+                  {linkedJourneys.map((journey) => (
+                    <div
+                      key={journey.token}
+                      className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center">
+                          <Key className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <code className="text-sm bg-white px-3 py-1.5 rounded-lg font-mono text-slate-700 border border-slate-200">
+                            {journey.token}
+                          </code>
+                          <div className="flex items-center gap-4 mt-2">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                              <Calendar className="w-3 h-3" />
+                              <span>{journey.date}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                              <Shield className="w-3 h-3" />
+                              <span>{journey.device}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-3">
+                        <StatusBadge status={journey.status} />
+                        <Link to={createPageUrl(`JourneyDetail?token=${journey.token}`)}>
+                          <Button variant="outline" size="sm" className="gap-2">
+                            <ExternalLink className="w-4 h-4" />
+                            View Details
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <StatusBadge status={journey.status} size="sm" />
-                      <Link to={createPageUrl(`JourneyDetail?token=${journey.token}`)}>
-                        <Button variant="ghost" size="sm" className="gap-1">
-                          <ExternalLink className="w-4 h-4" />
-                          View
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

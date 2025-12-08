@@ -240,116 +240,118 @@ export default function TemplateBuilder() {
     switch (currentStep) {
       case 0:
         return (
-          <div className="max-w-4xl mx-auto space-y-6">
-            {/* Basic Info Section */}
-            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
-              <h3 className="font-semibold text-slate-900">Blueprint Information</h3>
+          <div className="max-w-7xl mx-auto">
+            <div className={`grid grid-cols-1 gap-6 ${uploadedPreview ? 'lg:grid-cols-2' : ''}`}>
+              {/* Left Column: Form */}
+              <div className={`space-y-6 ${!uploadedPreview ? 'max-w-4xl mx-auto' : ''}`}>
+                {/* Basic Info Section */}
+                <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
+                  <h3 className="font-semibold text-slate-900">Blueprint Information</h3>
 
-              <div className="space-y-2">
-                <Label htmlFor="name">Blueprint Name *</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g., Sales Agreement"
-                  value={templateData.name}
-                  onChange={(e) => setTemplateData({ ...templateData, name: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Describe what this blueprint is used for..."
-                  rows={4}
-                  value={templateData.description}
-                  onChange={(e) => setTemplateData({ ...templateData, description: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Upload Section */}
-            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
-              <h3 className="font-semibold text-slate-900">Upload Document</h3>
-
-              {!uploadedFile ? (
-                <label className="block">
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*,.pdf"
-                    onChange={handleFileUpload}
-                  />
-                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-12 text-center hover:border-slate-400 hover:bg-slate-50 transition-colors cursor-pointer">
-                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                      <Upload className="w-8 h-8 text-slate-700" />
-                    </div>
-                    <h3 className="font-semibold text-slate-900 mb-2">Upload your document</h3>
-                    <p className="text-sm text-slate-500 mb-4">
-                      Drag and drop your PDF or Image file here, or click to browse
-                    </p>
-                    <Button variant="outline" type="button">Browse Files</Button>
-                    <p className="text-xs text-slate-400 mt-4">Supported: PDF, JPG, PNG • Max size: 25MB</p>
-                  </div>
-                </label>
-              ) : (
-                <div className="space-y-4">
-                  {/* File Info */}
-                  <div className="p-4 bg-slate-50 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-slate-700" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">{uploadedFile.name}</p>
-                        <p className="text-sm text-slate-500">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-slate-400 hover:text-red-600"
-                      onClick={() => {
-                        setUploadedFile(null);
-                        setUploadedPreview(null);
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Blueprint Name *</Label>
+                    <Input
+                      id="name"
+                      placeholder="e.g., Sales Agreement"
+                      value={templateData.name}
+                      onChange={(e) => setTemplateData({ ...templateData, name: e.target.value })}
+                    />
                   </div>
 
-                  {/* Preview */}
-                  {uploadedPreview && (
-                    <div className="border border-slate-200 rounded-xl overflow-hidden">
-                      <div className="bg-slate-100 px-4 py-2 border-b border-slate-200">
-                        <span className="text-sm font-medium text-slate-700">Document Preview</span>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      placeholder="Describe what this blueprint is used for..."
+                      rows={4}
+                      value={templateData.description}
+                      onChange={(e) => setTemplateData({ ...templateData, description: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {/* Upload Section */}
+                <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
+                  <h3 className="font-semibold text-slate-900">Upload Document</h3>
+
+                  {!uploadedFile ? (
+                    <label className="block">
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*,.pdf"
+                        onChange={handleFileUpload}
+                      />
+                      <div className="border-2 border-dashed border-slate-200 rounded-xl p-12 text-center hover:border-slate-400 hover:bg-slate-50 transition-colors cursor-pointer">
+                        <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                          <Upload className="w-8 h-8 text-slate-700" />
+                        </div>
+                        <h3 className="font-semibold text-slate-900 mb-2">Upload your document</h3>
+                        <p className="text-sm text-slate-500 mb-4">
+                          Drag and drop your PDF or Image file here, or click to browse
+                        </p>
+                        <Button variant="outline" type="button">Browse Files</Button>
+                        <p className="text-xs text-slate-400 mt-4">Supported: PDF, JPG, PNG • Max size: 25MB</p>
                       </div>
-                      <div className="p-4 bg-slate-50 max-h-[500px] overflow-auto">
-                        {uploadedPreview.type === 'application/pdf' ? (
-                          <Document
-                            file={uploadedPreview.data}
-                            onLoadError={(error) => {
-                              console.error('PDF load error:', error);
-                              toast.error('Failed to load PDF');
-                            }}
-                            loading={<div className="text-center p-4">Loading PDF...</div>}
-                          >
-                            <Page
-                              pageNumber={1}
-                              width={500}
-                              renderTextLayer={false}
-                              renderAnnotationLayer={false}
-                            />
-                          </Document>
-                        ) : (
-                          <img
-                            src={uploadedPreview.data}
-                            alt="Document preview"
-                            className="w-full rounded shadow-sm"
-                          />
-                        )}
+                    </label>
+                  ) : (
+                    <div className="p-4 bg-slate-50 rounded-lg flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-slate-700" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-900">{uploadedFile.name}</p>
+                          <p className="text-sm text-slate-500">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-slate-400 hover:text-red-600"
+                        onClick={() => {
+                          setUploadedFile(null);
+                          setUploadedPreview(null);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Right Column: Preview - Only show when document is uploaded */}
+              {uploadedPreview && (
+                <div className="lg:sticky lg:top-24 lg:h-fit">
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div className="p-6 bg-slate-50 flex items-center justify-center">
+                      {uploadedPreview.type === 'application/pdf' ? (
+                        <Document
+                          file={uploadedPreview.data}
+                          onLoadError={(error) => {
+                            console.error('PDF load error:', error);
+                            toast.error('Failed to load PDF');
+                          }}
+                          loading={<div className="text-center p-4">Loading PDF...</div>}
+                        >
+                          <Page
+                            pageNumber={1}
+                            scale={1}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                            className="max-w-full h-auto"
+                          />
+                        </Document>
+                      ) : (
+                        <img
+                          src={uploadedPreview.data}
+                          alt="Document preview"
+                          className="max-w-full h-auto"
+                        />
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -358,12 +360,13 @@ export default function TemplateBuilder() {
 
       case 1:
         return (
-          <FieldPlacement
-            className="mx-auto"
-            documentPreview={uploadedPreview}
-            onFieldsChange={setTemplateFields}
-            parties={parties}
-          />
+          <div className="h-full">
+            <FieldPlacement
+              documentPreview={uploadedPreview}
+              onFieldsChange={setTemplateFields}
+              parties={parties}
+            />
+          </div>
         );
         
       default:
@@ -372,9 +375,9 @@ export default function TemplateBuilder() {
   };
   
   return (
-    <div className="min-h-screen bg-slate-50/50">
+    <div className="h-screen bg-slate-50/50 flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-20 flex-shrink-0">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between gap-8">
             {/* Left: Back button and Title */}
@@ -420,50 +423,33 @@ export default function TemplateBuilder() {
               ))}
             </div>
 
-            {/* Right: Save as Draft button */}
+            {/* Right: Action buttons */}
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={handleSaveAsDraft}>Save as Draft</Button>
+              {currentStep === steps.length - 1 ? (
+                <Button
+                  className="gap-2 bg-slate-900 hover:bg-slate-800"
+                  onClick={handleActivateTemplate}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Activate Blueprint
+                </Button>
+              ) : (
+                <Button
+                  className="bg-slate-900 hover:bg-slate-800"
+                  onClick={() => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1))}
+                >
+                  Next Step
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-6 lg:p-8 pb-24">
+      <div className="flex-1 p-6 lg:p-8 overflow-hidden">
         {renderStepContent()}
-      </div>
-      
-      {/* Footer Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-3 px-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
-          {/* Previous Button */}
-          <Button
-            variant="outline"
-            onClick={() => setCurrentStep(prev => Math.max(prev - 1, 0))}
-            disabled={currentStep === 0}
-            className="min-w-24"
-          >
-            Previous
-          </Button>
-
-          {/* Next/Activate Button */}
-          {currentStep === steps.length - 1 ? (
-            <Button
-              className="gap-2 bg-slate-900 hover:bg-slate-800 min-w-24"
-              onClick={handleActivateTemplate}
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              Activate Blueprint
-            </Button>
-          ) : (
-            <Button
-              className="bg-slate-900 hover:bg-slate-800 min-w-24"
-              onClick={() => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1))}
-            >
-              Next Step
-            </Button>
-          )}
-        </div>
       </div>
     </div>
   );

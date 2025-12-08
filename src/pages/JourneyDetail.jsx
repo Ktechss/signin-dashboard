@@ -50,25 +50,25 @@ const journeyData = {
     },
     { 
       id: 2, 
-      name: 'Journey Blocked', 
-      status: 'blocked', 
-      description: 'User journey has been blocked due to multiple failed attempts.',
+      name: 'Request Blocked',
+      status: 'blocked',
+      description: 'User signing request has been blocked due to multiple failed attempts.',
       icon: 'lock'
     },
   ],
   
   // Logs
   logs: [
-    { timestamp: '15:46:40', level: 'info', message: 'Journey started' },
+    { timestamp: '15:46:40', level: 'info', message: 'Signing request started' },
     { timestamp: '15:46:42', level: 'info', message: 'Document selection completed' },
-    { timestamp: '15:46:51', level: 'error', message: 'Journey blocked - multiple failed attempts' },
+    { timestamp: '15:46:51', level: 'error', message: 'Signing request blocked - multiple failed attempts' },
   ],
   
   // Events
   events: [
-    { timestamp: '15:46:40', type: 'JOURNEY_STARTED', data: 'Session initialized' },
+    { timestamp: '15:46:40', type: 'REQUEST_STARTED', data: 'Session initialized' },
     { timestamp: '15:46:42', type: 'DOCUMENT_SELECTED', data: 'Emirates_id' },
-    { timestamp: '15:46:51', type: 'JOURNEY_BLOCKED', data: 'Security policy triggered' },
+    { timestamp: '15:46:51', type: 'REQUEST_BLOCKED', data: 'Security policy triggered' },
   ],
   
   // Linked Contract
@@ -102,7 +102,7 @@ export default function JourneyDetail() {
               </Button>
             </Link>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">Journey Detail</h1>
+              <h1 className="text-2xl font-bold text-slate-900">Signing Request Detail</h1>
               <StatusBadge status={journeyData.status} />
             </div>
           </div>
@@ -160,7 +160,7 @@ export default function JourneyDetail() {
             {/* Right Column */}
             <div className="space-y-5">
               <div>
-                <p className="text-sm text-slate-500 mb-1">Journey Token</p>
+                <p className="text-sm text-slate-500 mb-1">Request Token</p>
                 <div className="flex items-center gap-2">
                   <code className="font-mono text-sm text-slate-900">{journeyData.journeyToken}</code>
                   <button 
@@ -173,7 +173,7 @@ export default function JourneyDetail() {
               </div>
               
               <div>
-                <p className="text-sm text-slate-500 mb-1">Journey Type</p>
+                <p className="text-sm text-slate-500 mb-1">Request Type</p>
                 <span className="inline-flex items-center bg-blue-100 text-blue-700 px-3 py-1 rounded-md text-sm font-medium">
                   {journeyData.journeyType}
                 </span>
@@ -195,7 +195,7 @@ export default function JourneyDetail() {
               </div>
               
               <div>
-                <p className="text-sm text-slate-500 mb-1">Journey Config</p>
+                <p className="text-sm text-slate-500 mb-1">Request Config</p>
                 <Button variant="outline" size="sm" className="gap-2">
                   <Eye className="w-4 h-4" />
                   View Config
@@ -369,7 +369,7 @@ export default function JourneyDetail() {
               ) : (
                 <div className="text-center py-8 text-slate-500">
                   <FileText className="w-10 h-10 mx-auto mb-2 text-slate-300" />
-                  <p>No contract linked to this journey</p>
+                  <p>No contract linked to this signing request</p>
                 </div>
               )}
             </TabsContent>

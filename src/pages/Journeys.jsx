@@ -56,7 +56,7 @@ const mockJourneys = [
 ];
 
 const stats = [
-  { title: 'Total Journeys', value: '1,234', subtitle: 'All verification attempts', icon: Clock, iconColor: 'text-indigo-600', iconBg: 'bg-indigo-50' },
+  { title: 'Total Signing Requests', value: '1,234', subtitle: 'All verification attempts', icon: Clock, iconColor: 'text-indigo-600', iconBg: 'bg-indigo-50' },
   { title: 'Authorised', value: '1,098', trend: 'up', trendValue: '+2.1%', icon: CheckCircle2, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
   { title: 'Rejected', value: '68', trend: 'down', trendValue: '-12%', icon: XCircle, iconColor: 'text-red-600', iconBg: 'bg-red-50' },
   { title: 'Pending', value: '156', subtitle: 'Awaiting verification', icon: AlertCircle, iconColor: 'text-amber-600', iconBg: 'bg-amber-50' },
@@ -84,8 +84,8 @@ export default function Journeys() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Journeys</h1>
-            <p className="text-slate-500 mt-1">Track individual signing journeys and their status.</p>
+            <h1 className="text-2xl font-bold text-slate-900">Signing Requests</h1>
+            <p className="text-slate-500 mt-1">Track individual signing requests and their status.</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" className="gap-2">
@@ -147,7 +147,7 @@ export default function Journeys() {
         {/* Bulk Actions */}
         {selectedRows.length > 0 && (
           <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex items-center justify-between">
-            <span className="text-sm text-indigo-700 font-medium">{selectedRows.length} journeys selected</span>
+            <span className="text-sm text-indigo-700 font-medium">{selectedRows.length} signing requests selected</span>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" className="gap-2 bg-white">
                 <Bell className="w-4 h-4" />
@@ -177,7 +177,7 @@ export default function Journeys() {
                       onCheckedChange={toggleAll}
                     />
                   </TableHead>
-                  <TableHead>Journey Token</TableHead>
+                  <TableHead>Request Token</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Activity</TableHead>
                   <TableHead>Created</TableHead>
@@ -231,7 +231,7 @@ export default function Journeys() {
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="gap-2 text-red-600">
                             <XCircle className="w-4 h-4" />
-                            Cancel Journey
+                            Cancel Request
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -245,7 +245,7 @@ export default function Journeys() {
           {/* Pagination */}
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
             <p className="text-sm text-slate-500">
-              Showing <span className="font-medium">1-10</span> of <span className="font-medium">1,234</span> journeys
+              Showing <span className="font-medium">1-10</span> of <span className="font-medium">1,234</span> signing requests
             </p>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" disabled>Previous</Button>
@@ -258,10 +258,10 @@ export default function Journeys() {
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
           <div>
-            <p className="font-medium text-blue-800">Understanding Journeys</p>
+            <p className="font-medium text-blue-800">Understanding Signing Requests</p>
             <p className="text-sm text-blue-700">
-              Each journey represents a verification attempt for a party. When verification fails (Rejected), 
-              a new journey can be created for the same party with an incremented attempt number.
+              Each signing request represents a verification attempt for a party. When verification fails (Rejected),
+              a new signing request can be created for the same party with an incremented attempt number.
             </p>
           </div>
         </div>

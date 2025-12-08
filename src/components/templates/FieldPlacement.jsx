@@ -180,7 +180,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
   };
 
   return (
-    <div className={cn('flex h-[700px] bg-slate-50 rounded-xl overflow-hidden border border-slate-200', className)}>
+    <div className={cn('flex h-full bg-slate-50 rounded-xl overflow-hidden border border-slate-200', className)}>
       {/* Left Panel - Signature Tool */}
       <div className="w-64 bg-white border-r border-slate-200 p-4">
         <h3 className="font-semibold text-slate-900 mb-4">Signature</h3>

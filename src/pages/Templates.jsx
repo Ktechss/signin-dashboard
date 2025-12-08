@@ -68,7 +68,7 @@ export default function Templates() {
   
   return (
     <div className="min-h-screen bg-slate-50/50">
-      <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      <div className="p-6 lg:p-8 max-w-8xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>

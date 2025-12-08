@@ -1,12 +1,10 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { 
-  Search, 
-  Filter, 
-  X, 
-  LayoutGrid, 
-  List,
-  SlidersHorizontal 
+import {
+  Search,
+  Filter,
+  X,
+  SlidersHorizontal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,13 +24,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 
-export default function ContractFilters({ 
-  filters, 
-  onFiltersChange, 
-  viewMode, 
-  onViewModeChange,
+export default function ContractFilters({
+  filters,
+  onFiltersChange,
   activeFiltersCount = 0,
-  className 
+  className
 }) {
   const [dateRange, setDateRange] = React.useState({ from: null, to: null });
   
@@ -161,26 +157,6 @@ export default function ContractFilters({
               </div>
             </PopoverContent>
           </Popover>
-        </div>
-        
-        {/* View Toggle */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className={cn('h-8 w-8 p-0', viewMode === 'grid' && 'bg-white shadow-sm')}
-            onClick={() => onViewModeChange?.('grid')}
-          >
-            <LayoutGrid className="w-4 h-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className={cn('h-8 w-8 p-0', viewMode === 'list' && 'bg-white shadow-sm')}
-            onClick={() => onViewModeChange?.('list')}
-          >
-            <List className="w-4 h-4" />
-          </Button>
         </div>
       </div>
       

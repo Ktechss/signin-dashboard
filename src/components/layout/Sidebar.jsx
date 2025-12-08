@@ -22,21 +22,14 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 
 const navigation = [
   { name: 'Dashboard', icon: LayoutDashboard, href: 'Dashboard' },
-  {
-    name: 'Current',
-    icon: FileText,
-    children: [
-      { name: 'Contracts', href: 'Contracts' },
-      { name: 'Journeys', href: 'Journeys' },
-    ]
-  },
+  { name: 'Signing', icon: FileText, href: 'Current' },
   { name: 'Blueprints', icon: Layers, href: 'Templates' },
 ];
 
 export default function Sidebar({ currentPage, isAdmin = true }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openSections, setOpenSections] = useState(['Current']);
+  const [openSections, setOpenSections] = useState([]);
   
   const toggleSection = (name) => {
     setOpenSections(prev => 
