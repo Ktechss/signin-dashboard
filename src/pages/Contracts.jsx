@@ -70,8 +70,8 @@ export default function Contracts() {
                 <TableRow className="bg-slate-50/50">
                   <TableHead>Contract ID</TableHead>
                   <TableHead>Blueprint Name</TableHead>
-                  <TableHead>Signing Progress</TableHead>
-                  <TableHead>Issue Date</TableHead>
+                  <TableHead>Progress</TableHead>
+                  <TableHead>Created On</TableHead>
                   <TableHead>Last Updated</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-12"></TableHead>

@@ -326,8 +326,7 @@ export default function SignContract() {
 
                     {/* Template Info */}
                     <div className="p-2">
-                      <h4 className="font-medium text-xs text-slate-900 truncate mb-0.5">{template.name}</h4>
-                      <p className="text-[10px] text-slate-500 truncate">{template.category}</p>
+                      <h4 className="font-medium text-xs text-slate-900 truncate">{template.name}</h4>
                     </div>
                   </div>
                 ))}

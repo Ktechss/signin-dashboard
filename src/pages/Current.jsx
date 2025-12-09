@@ -117,8 +117,8 @@ export default function Current() {
                     <TableRow className="bg-slate-50/50">
                       <TableHead>Contract ID</TableHead>
                       <TableHead>Blueprint Name</TableHead>
-                      <TableHead>Signing Progress</TableHead>
-                      <TableHead>Issue Date</TableHead>
+                      <TableHead>Progress</TableHead>
+                      <TableHead>Created On</TableHead>
                       <TableHead>Last Updated</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="w-12"></TableHead>
@@ -209,42 +209,18 @@ export default function Current() {
                   <Input placeholder="Search by name, email, or token..." className="pl-10" />
                 </div>
 
-                <div className="flex items-center gap-3 flex-wrap">
-                  <Select defaultValue="all">
-                    <SelectTrigger className="w-[160px]">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="authorised">Authorised</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="expired">Expired</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select defaultValue="all">
-                    <SelectTrigger className="w-[160px]">
-                      <SelectValue placeholder="Attempt" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Attempts</SelectItem>
-                      <SelectItem value="1">1st Attempt</SelectItem>
-                      <SelectItem value="2">2nd Attempt</SelectItem>
-                      <SelectItem value="3">3rd+ Attempt</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <div className="flex items-center gap-2">
-                    <Checkbox id="latest" />
-                    <label htmlFor="latest" className="text-sm text-slate-600">Latest attempt only</label>
-                  </div>
-
-                  <Button variant="outline" className="gap-2">
-                    <Download className="w-4 h-4" />
-                    Export CSV
-                  </Button>
-                </div>
+                <Select defaultValue="all">
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="authorised">Authorised</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -358,17 +334,7 @@ export default function Current() {
               </div>
             </div>
 
-            {/* Info Box */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div>
-                <p className="font-medium text-blue-800">Understanding Signing Requests</p>
-                <p className="text-sm text-blue-700">
-                  Each signing request represents a verification attempt for a party. When verification fails (Rejected),
-                  a new signing request can be created for the same party with an incremented attempt number.
-                </p>
-              </div>
-            </div>
+
           </TabsContent>
         </Tabs>
       </div>

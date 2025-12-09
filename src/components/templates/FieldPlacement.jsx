@@ -14,7 +14,9 @@ import {
   Copy,
   Users,
   Upload,
-  Plus
+  Plus,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +28,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 
 // Configure PDF.js worker to match react-pdf's version
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -46,12 +47,6 @@ const allFieldTypes = [
   { id: 'number', icon: Hash, label: 'Number', color: 'bg-rose-500' },
 ];
 
-const mockFields = [
-  { id: 1, type: 'signature', x: 350, y: 680, width: 180, height: 60, role: 'signer_1' },
-  { id: 2, type: 'date', x: 350, y: 750, width: 120, height: 30, role: 'signer_1' },
-  { id: 3, type: 'signature', x: 350, y: 820, width: 180, height: 60, role: 'signer_2' },
-];
-
 export default function FieldPlacement({ className, documentPreview, onFieldsChange, parties = [] }) {
   const [zoom, setZoom] = useState(100);
   const [fields, setFields] = useState([]);
@@ -61,6 +56,35 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isResizing, setIsResizing] = useState(false);
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [expandedSigners, setExpandedSigners] = useState({});
+  const [selectedSigner, setSelectedSigner] = useState(null);
+
+  // Group fields by signer/role
+  const getFieldsGroupedBySigner = () => {
+    const grouped = {};
+    fields.forEach(field => {
+      const role = field.role || 'unassigned';
+      if (!grouped[role]) {
+        grouped[role] = [];
+      }
+      grouped[role].push(field);
+    });
+    return grouped;
+  };
+
+  // Toggle signer group expansion
+  const toggleSignerExpanded = (role) => {
+    setExpandedSigners(prev => ({
+      ...prev,
+      [role]: !prev[role]
+    }));
+  };
+
+  // Get signer name from parties or generate default
+  const getSignerName = (role) => {
+    const party = parties.find(p => p.id.toString() === role);
+    return party ? party.name : `Signer ${role}`;
+  };
 
   // Notify parent when fields change
   const updateFields = (newFields) => {
@@ -180,7 +204,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
   };
 
   return (
-    <div className={cn('flex h-full bg-slate-50 rounded-xl overflow-hidden border border-slate-200', className)}>
+    <div className={cn('flex h-full bg-slate-50 overflow-hidden border border-slate-200', className)}>
       {/* Left Panel - Signature Tool */}
       <div className="w-64 bg-white border-r border-slate-200 p-4">
         <h3 className="font-semibold text-slate-900 mb-4">Signature</h3>
@@ -209,16 +233,15 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
             <div className="space-y-2">
               {parties.map((party, index) => {
                 const colors = [
-                  { bg: 'bg-indigo-50', border: 'border-indigo-200', dot: 'bg-indigo-500', text: 'text-indigo-700' },
-                  { bg: 'bg-emerald-50', border: 'border-emerald-200', dot: 'bg-emerald-500', text: 'text-emerald-700' },
-                  { bg: 'bg-purple-50', border: 'border-purple-200', dot: 'bg-purple-500', text: 'text-purple-700' },
-                  { bg: 'bg-amber-50', border: 'border-amber-200', dot: 'bg-amber-500', text: 'text-amber-700' },
+                  { bg: 'bg-indigo-50', leftBorder: 'border-l-indigo-500', text: 'text-indigo-700' },
+                  { bg: 'bg-emerald-50', leftBorder: 'border-l-emerald-500', text: 'text-emerald-700' },
+                  { bg: 'bg-purple-50', leftBorder: 'border-l-purple-500', text: 'text-purple-700' },
+                  { bg: 'bg-amber-50', leftBorder: 'border-l-amber-500', text: 'text-amber-700' },
                 ];
                 const color = colors[index % colors.length];
                 return (
-                  <div key={party.id} className={`flex items-center gap-2 p-2 rounded-lg ${color.bg} border ${color.border}`}>
-                    <div className={`w-3 h-3 rounded-full ${color.dot}`} />
-                    <span className={`text-sm ${color.text}`}>{party.name}</span>
+                  <div key={party.id} className={`p-2.5 rounded-r-lg ${color.bg} border-l-4 ${color.leftBorder}`}>
+                    <span className={`text-sm font-medium ${color.text}`}>{party.name}</span>
                   </div>
                 );
               })}
@@ -363,7 +386,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                     className={cn(
                       'absolute border-2 border-dashed rounded cursor-move flex items-center justify-center transition-all group',
                       roleColor,
-                      selectedField === field.id && 'ring-2 ring-indigo-500 ring-offset-2'
+                      selectedField === field.id && 'ring-2 ring-slate-900 ring-offset-2'
                     )}
                     style={{
                       left: field.x * (zoom / 100),
@@ -383,7 +406,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
 
                     {/* Resize Handle */}
                     <div
-                      className="absolute bottom-0 right-0 w-4 h-4 bg-indigo-600 rounded-tl cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute bottom-0 right-0 w-4 h-4 bg-slate-700 rounded-tl cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-opacity"
                       onMouseDown={(e) => handleResizeStart(e, field.id)}
                     >
                       <div className="absolute bottom-0.5 right-0.5 w-2 h-2 border-r-2 border-b-2 border-white" />
@@ -427,7 +450,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
           {documentPreview?.data && (
             <Button
               onClick={addSignature}
-              className="absolute bottom-6 right-6 rounded-full w-12 h-12 bg-indigo-600 hover:bg-indigo-700 shadow-lg z-20"
+              className="absolute bottom-6 right-6 rounded-full w-12 h-12 bg-slate-900 hover:bg-slate-800 shadow-lg z-20"
               size="icon"
               title="Add new signature"
             >
@@ -438,102 +461,205 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
       </div>
 
       {/* Right Panel - Field Properties */}
-      <div className="w-72 bg-white border-l border-slate-200 p-4">
+      <div className="w-72 bg-white border-l border-slate-200 p-4 overflow-y-auto">
         <h3 className="font-semibold text-slate-900 mb-4">Field Properties</h3>
-        
-        {selectedField ? (
+
+        {fields.length > 0 ? (
           <div className="space-y-4">
+            {/* Top-level Signer Dropdown */}
             {(() => {
-              const field = fields.find(f => f.id === selectedField);
-              if (!field) return null;
+              const groupedFields = getFieldsGroupedBySigner();
+              const signerColors = [
+                { bg: 'bg-indigo-50', border: 'border-indigo-200', dot: 'bg-indigo-500', text: 'text-indigo-700' },
+                { bg: 'bg-emerald-50', border: 'border-emerald-200', dot: 'bg-emerald-500', text: 'text-emerald-700' },
+                { bg: 'bg-purple-50', border: 'border-purple-200', dot: 'bg-purple-500', text: 'text-purple-700' },
+                { bg: 'bg-amber-50', border: 'border-amber-200', dot: 'bg-amber-500', text: 'text-amber-700' },
+              ];
+              const availableSigners = Object.keys(groupedFields);
+              const currentSigner = selectedSigner || availableSigners[0];
+              const currentSignerFields = groupedFields[currentSigner] || [];
+              const currentSignerIndex = parseInt(currentSigner) - 1;
+              const currentColorScheme = signerColors[currentSignerIndex % signerColors.length] || signerColors[0];
 
               return (
                 <>
+                  {/* Signer Selection Dropdown */}
                   <div className="space-y-2">
-                    <Label>Field Type</Label>
+                    <Label className="text-sm font-medium">Select Signer</Label>
                     <Select
-                      value={field.type}
-                      onValueChange={(value) => updateField(selectedField, { type: value })}
+                      value={currentSigner}
+                      onValueChange={(value) => setSelectedSigner(value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className={`${currentColorScheme.bg} ${currentColorScheme.border} border`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {allFieldTypes.map(type => (
-                          <SelectItem key={type.id} value={type.id}>{type.label}</SelectItem>
-                        ))}
+                        {availableSigners.map((role) => {
+                          const roleIndex = parseInt(role) - 1;
+                          const colorScheme = signerColors[roleIndex % signerColors.length] || signerColors[0];
+                          const signerFieldCount = groupedFields[role]?.length || 0;
+                          return (
+                            <SelectItem key={role} value={role}>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${colorScheme.dot}`} />
+                                <span className="font-medium">{getSignerName(role)}</span>
+                                <span className="text-slate-400">({signerFieldCount} {signerFieldCount === 1 ? 'signature' : 'signatures'})</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  {parties.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Assigned Role</Label>
-                      <Select
-                        value={field.role || parties[0]?.id.toString()}
-                        onValueChange={(value) => updateField(selectedField, { role: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {parties.map((party) => (
-                            <SelectItem key={party.id} value={party.id.toString()}>
-                              {party.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  {/* Signatures for Selected Signer */}
+                  <div className={`p-3 rounded-lg border ${currentColorScheme.border} ${currentColorScheme.bg}`}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className={`w-3 h-3 rounded-full ${currentColorScheme.dot}`} />
+                      <span className={`text-sm font-semibold ${currentColorScheme.text}`}>
+                        {getSignerName(currentSigner)}'s Signatures
+                      </span>
                     </div>
-                  )}
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Width (px)</Label>
-                      <Input
-                        type="number"
-                        value={Math.round(field.width)}
-                        onChange={(e) => updateField(selectedField, { width: parseInt(e.target.value) || 120 })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Height (px)</Label>
-                      <Input
-                        type="number"
-                        value={Math.round(field.height)}
-                        onChange={(e) => updateField(selectedField, { height: parseInt(e.target.value) || 30 })}
-                      />
-                    </div>
+                    {currentSignerFields.length > 0 ? (
+                      <div className="space-y-2">
+                        {currentSignerFields.map((field, index) => {
+                          const fieldType = allFieldTypes.find(f => f.id === field.type);
+                          const isExpanded = expandedSigners[field.id] !== false;
+                          const isSelected = selectedField === field.id;
+
+                          return (
+                            <div
+                              key={field.id}
+                              className={cn(
+                                'rounded-lg border bg-white overflow-hidden',
+                                isSelected ? 'ring-2 ring-slate-900 border-slate-400' : 'border-slate-200'
+                              )}
+                            >
+                              {/* Signature Header */}
+                              <button
+                                className="w-full flex items-center justify-between p-2.5 hover:bg-slate-50 transition-colors"
+                                onClick={() => {
+                                  toggleSignerExpanded(field.id);
+                                  setSelectedField(field.id);
+                                }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  {fieldType && <fieldType.icon className="w-4 h-4 text-slate-600" />}
+                                  <span className="text-sm font-medium text-slate-700">
+                                    {fieldType?.label} {index + 1}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="w-6 h-6 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateFields(fields.filter(f => f.id !== field.id));
+                                      if (selectedField === field.id) setSelectedField(null);
+                                    }}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                  {isExpanded ? (
+                                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                                  ) : (
+                                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                                  )}
+                                </div>
+                              </button>
+
+                              {/* Expanded Properties */}
+                              {isExpanded && (
+                                <div className="p-3 pt-0 space-y-3 border-t border-slate-100">
+                                  {/* Position & Size Display */}
+                                  {/* <div className="grid grid-cols-2 gap-2 text-xs pt-3">
+                                    <div className="flex items-center justify-between bg-slate-50 rounded px-2 py-1.5">
+                                      <span className="text-slate-500">X:</span>
+                                      <span className="font-medium text-slate-700">{Math.round(field.x)}px</span>
+                                    </div>
+                                    <div className="flex items-center justify-between bg-slate-50 rounded px-2 py-1.5">
+                                      <span className="text-slate-500">Y:</span>
+                                      <span className="font-medium text-slate-700">{Math.round(field.y)}px</span>
+                                    </div>
+                                    <div className="flex items-center justify-between bg-slate-50 rounded px-2 py-1.5">
+                                      <span className="text-slate-500">Width:</span>
+                                      <span className="font-medium text-slate-700">{Math.round(field.width)}px</span>
+                                    </div>
+                                    <div className="flex items-center justify-between bg-slate-50 rounded px-2 py-1.5">
+                                      <span className="text-slate-500">Height:</span>
+                                      <span className="font-medium text-slate-700">{Math.round(field.height)}px</span>
+                                    </div>
+                                  </div> */}
+
+                                  {/* Editable Fields */}
+                                  <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="space-y-1">
+                                        <Label className="text-xs">X Position</Label>
+                                        <Input
+                                          type="number"
+                                          className="h-8 text-xs"
+                                          value={Math.round(field.x)}
+                                          onChange={(e) => updateField(field.id, { x: parseInt(e.target.value) || 0 })}
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <Label className="text-xs">Y Position</Label>
+                                        <Input
+                                          type="number"
+                                          className="h-8 text-xs"
+                                          value={Math.round(field.y)}
+                                          onChange={(e) => updateField(field.id, { y: parseInt(e.target.value) || 0 })}
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="space-y-1">
+                                        <Label className="text-xs">Width</Label>
+                                        <Input
+                                          type="number"
+                                          className="h-8 text-xs"
+                                          value={Math.round(field.width)}
+                                          onChange={(e) => updateField(field.id, { width: parseInt(e.target.value) || 120 })}
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <Label className="text-xs">Height</Label>
+                                        <Input
+                                          type="number"
+                                          className="h-8 text-xs"
+                                          value={Math.round(field.height)}
+                                          onChange={(e) => updateField(field.id, { height: parseInt(e.target.value) || 30 })}
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">Label</Label>
+                                      <Input
+                                        className="h-8 text-xs"
+                                        value={field.placeholder || ''}
+                                        onChange={(e) => updateField(field.id, { placeholder: e.target.value })}
+                                        placeholder="e.g., Sign here..."
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-500 text-center py-4">
+                        No signatures for this signer
+                      </p>
+                    )}
                   </div>
-
-                  <div className="flex items-center justify-between">
-                    <Label>Required</Label>
-                    <Switch
-                      checked={field.required !== false}
-                      onCheckedChange={(checked) => updateField(selectedField, { required: checked })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Label/Placeholder</Label>
-                    <Input
-                      value={field.placeholder || ''}
-                      onChange={(e) => updateField(selectedField, { placeholder: e.target.value })}
-                      placeholder="e.g., Sign here..."
-                    />
-                  </div>
-
-                  <Button
-                    variant="destructive"
-                    className="w-full"
-                    onClick={() => {
-                      updateFields(fields.filter(f => f.id !== selectedField));
-                      setSelectedField(null);
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Field
-                  </Button>
                 </>
               );
             })()}
@@ -543,7 +669,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
             <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
               <Move className="w-6 h-6 text-slate-400" />
             </div>
-            <p className="text-sm text-slate-500">Select a field to edit its properties</p>
+            <p className="text-sm text-slate-500">Add signature fields to the document to see them here</p>
           </div>
         )}
       </div>

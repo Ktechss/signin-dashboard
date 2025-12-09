@@ -14,15 +14,22 @@ import {
   Key,
   Users,
   Activity,
-  Download,
-  Mail,
   Shield,
-  AlertCircle
+  ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import StatusBadge from '@/components/ui-custom/StatusBadge';
 import Timeline from '@/components/ui-custom/Timeline';
+import RecordViewerModal from '@/components/ui-custom/RecordViewerModal';
 
 // Mock contract data
 const contract = {
@@ -48,29 +55,53 @@ const linkedJourneys = [
 ];
 
 const parties = [
-  { 
-    id: 1, 
-    name: 'John Smith', 
-    email: 'john@acme.com', 
-    role: 'Buyer', 
-    status: 'signed', 
-    signedAt: 'Jan 16, 2024 at 2:30 PM'
+  {
+    id: 1,
+    name: 'John Smith',
+    email: 'john@acme.com',
+    role: 'Buyer',
+    status: 'signed',
+    signedAt: 'Jan 16, 2024 at 2:30 PM',
+    documentHash: 'a3f2b8c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9',
+    signatureHash: '7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e',
+    mailSentAt: 'Jan 15, 2024 at 9:05 AM',
+    mailOpenedAt: 'Jan 16, 2024 at 2:10 PM',
+    remindersSent: 0,
+    documentViewedAt: 'Jan 16, 2024 at 2:15 PM',
+    verificationMethod: 'Facial Recognition + ID',
+    verifiedAt: 'Jan 16, 2024 at 2:25 PM',
   },
-  { 
-    id: 2, 
-    name: 'Jane Doe', 
-    email: 'jane@company.com', 
-    role: 'Seller', 
-    status: 'signed', 
-    signedAt: 'Jan 17, 2024 at 10:15 AM'
+  {
+    id: 2,
+    name: 'Jane Doe',
+    email: 'jane@company.com',
+    role: 'Seller',
+    status: 'signed',
+    signedAt: 'Jan 17, 2024 at 10:15 AM',
+    documentHash: 'a3f2b8c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9',
+    signatureHash: 'b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3',
+    mailSentAt: 'Jan 15, 2024 at 9:06 AM',
+    mailOpenedAt: 'Jan 17, 2024 at 9:45 AM',
+    remindersSent: 1,
+    documentViewedAt: 'Jan 17, 2024 at 9:50 AM',
+    verificationMethod: 'Email OTP + SMS',
+    verifiedAt: 'Jan 17, 2024 at 10:00 AM',
   },
-  { 
-    id: 3, 
-    name: 'Bob Wilson', 
-    email: 'bob@legal.com', 
-    role: 'Witness', 
-    status: 'pending', 
-    signedAt: null
+  {
+    id: 3,
+    name: 'Bob Wilson',
+    email: 'bob@legal.com',
+    role: 'Witness',
+    status: 'pending',
+    signedAt: null,
+    documentHash: null,
+    signatureHash: null,
+    mailSentAt: 'Jan 15, 2024 at 9:07 AM',
+    mailOpenedAt: 'Jan 18, 2024 at 11:30 AM',
+    remindersSent: 2,
+    documentViewedAt: 'Jan 18, 2024 at 11:35 AM',
+    verificationMethod: null,
+    verifiedAt: null,
   },
 ];
 
@@ -85,6 +116,15 @@ const activityLog = [
 ];
 
 export default function ContractDetail() {
+  const [currentPartyIndex, setCurrentPartyIndex] = useState(0);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleViewDetails = (party) => {
+    const index = parties.findIndex(p => p.id === party.id);
+    setCurrentPartyIndex(index >= 0 ? index : 0);
+    setModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
       <div className="max-w-6xl mx-auto px-6 py-8">
@@ -101,7 +141,7 @@ export default function ContractDetail() {
             <div className="flex items-start justify-between mb-6">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
                     <FileText className="w-6 h-6 text-white" />
                   </div>
                   <div>
@@ -117,7 +157,7 @@ export default function ContractDetail() {
               </div>
               <div className="flex items-center gap-3">
                 <StatusBadge status={contract.status} />
-                <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
+                <Button className="gap-2 bg-slate-900 hover:bg-slate-800">
                   <Eye className="w-4 h-4" />
                   View Document
                 </Button>
@@ -207,59 +247,92 @@ export default function ContractDetail() {
 
           <TabsContent value="parties" className="m-0 mt-6">
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="divide-y divide-slate-200">
-                {parties.map(party => (
-                  <div key={party.id} className="p-6 hover:bg-slate-50 transition-colors">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4 flex-1">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-sm font-semibold flex-shrink-0 ${
-                          party.status === 'signed' ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white' :
-                          party.status === 'failed' ? 'bg-gradient-to-br from-red-400 to-red-600 text-white' :
-                          'bg-gradient-to-br from-slate-300 to-slate-400 text-white'
-                        }`}>
-                          {party.name.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Users className="w-3.5 h-3.5 text-slate-400" />
-                                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Signatory</p>
-                              </div>
-                              <p className="text-sm font-semibold text-slate-900 mb-1">{party.name}</p>
-                              <div className="flex items-center gap-1.5">
-                                <Mail className="w-3 h-3 text-slate-400" />
-                                <p className="text-xs text-slate-500">{party.email}</p>
-                              </div>
-                            </div>
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Shield className="w-3.5 h-3.5 text-slate-400" />
-                                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Role</p>
-                              </div>
-                              <p className="text-sm font-semibold text-slate-900">{party.role}</p>
-                            </div>
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Signed At</p>
-                              </div>
-                              {party.signedAt ? (
-                                <p className="text-sm font-semibold text-slate-900">{party.signedAt}</p>
-                              ) : (
-                                <p className="text-sm text-slate-400">Not signed yet</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+              <div className="divide-y divide-slate-100">
+                {parties.map((party) => (
+                  <div key={party.id} className="p-5 hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center gap-6">
+                      {/* Avatar */}
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${
+                        party.status === 'signed' ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white' :
+                        party.status === 'failed' ? 'bg-gradient-to-br from-red-400 to-red-600 text-white' :
+                        'bg-gradient-to-br from-slate-300 to-slate-400 text-white'
+                      }`}>
+                        {party.name.split(' ').map(n => n[0]).join('')}
                       </div>
-                      <div className="flex flex-col gap-2 ml-4 flex-shrink-0 items-end">
+
+                      {/* Signatory */}
+                      <div className="min-w-[180px]">
+                        <p className="text-xs text-slate-400 flex items-center gap-1.5 mb-1">
+                          <Users className="w-3.5 h-3.5" />
+                          SIGNATORY
+                        </p>
+                        <p className="text-sm font-semibold text-slate-900">{party.name}</p>
+                        <p className="text-xs text-slate-500">{party.email}</p>
+                      </div>
+
+                      {/* Role */}
+                      <div className="min-w-[100px]">
+                        <p className="text-xs text-slate-400 flex items-center gap-1.5 mb-1">
+                          <Shield className="w-3.5 h-3.5" />
+                          ROLE
+                        </p>
+                        <p className="text-sm font-medium text-slate-700">{party.role}</p>
+                      </div>
+
+                      {/* Signed At */}
+                      <div className="min-w-[180px]">
+                        <p className="text-xs text-slate-400 flex items-center gap-1.5 mb-1">
+                          <Clock className="w-3.5 h-3.5" />
+                          SIGNED AT
+                        </p>
+                        <p className="text-sm text-slate-700">
+                          {party.signedAt || <span className="text-slate-400">Not signed yet</span>}
+                        </p>
+                      </div>
+
+                      {/* Status & Actions */}
+                      <div className="flex items-center gap-3 ml-auto">
                         <StatusBadge status={party.status} />
-                        {party.status === 'pending' && (
-                          <button className="p-1 hover:bg-slate-100 rounded transition-colors cursor-pointer">
-                            <Bell className="w-4 h-4 text-slate-600" />
-                          </button>
-                        )}
+                        <ButtonGroup>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetails(party)}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            View
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm" className="px-2">
+                                <ChevronDown className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleViewDetails(party)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Copy className="w-4 h-4 mr-2" />
+                                Copy Email
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Activity className="w-4 h-4 mr-2" />
+                                View Activity
+                              </DropdownMenuItem>
+                              {party.status === 'pending' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem>
+                                    <Bell className="w-4 h-4 mr-2" />
+                                    Send Reminder
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </ButtonGroup>
                       </div>
                     </div>
                   </div>
@@ -286,7 +359,7 @@ export default function ContractDetail() {
                       className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
                           <Key className="w-6 h-6 text-white" />
                         </div>
                         <div>
@@ -322,6 +395,15 @@ export default function ContractDetail() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Party Details Modal with Navigation */}
+      <RecordViewerModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        records={parties}
+        currentIndex={currentPartyIndex}
+        onIndexChange={setCurrentPartyIndex}
+      />
     </div>
   );
 }

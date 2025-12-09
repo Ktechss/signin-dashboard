@@ -109,8 +109,6 @@ export default function TemplateDetail() {
                 </Badge>
               </div>
               <div className="flex items-center gap-4 text-sm text-slate-500">
-                <span>{template.category}</span>
-                <span>•</span>
                 <span className="flex items-center gap-1">
                   <Users className="w-4 h-4" />
                   {template.usageCount} uses
@@ -157,7 +155,7 @@ export default function TemplateDetail() {
                   Version History
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="gap-2 text-amber-600">
+                <DropdownMenuItem className="gap-2 text-slate-600">
                   <Archive className="w-4 h-4" />
                   Archive
                 </DropdownMenuItem>
@@ -211,7 +209,7 @@ export default function TemplateDetail() {
                         />
                       )}
                       {/* Render field overlays */}
-                      {template.fields && Array.isArray(template.fields) && template.fields.map((field, index) => {
+                      {template.fields && Array.isArray(template.fields) && template.fields.map((field) => {
                         const fieldTypes = {
                           signature: { icon: '✍️', color: 'indigo' },
                           initials: { icon: '📝', color: 'purple' },
@@ -222,13 +220,16 @@ export default function TemplateDetail() {
                         };
 
                         const fieldInfo = fieldTypes[field.type] || fieldTypes.text;
+                        // Use colors based on field's role/party assignment
                         const colors = [
                           { border: 'border-indigo-400', bg: 'bg-indigo-100/70', text: 'text-indigo-700' },
-                          { border: 'border-purple-400', bg: 'bg-purple-100/70', text: 'text-purple-700' },
                           { border: 'border-emerald-400', bg: 'bg-emerald-100/70', text: 'text-emerald-700' },
-                          { border: 'border-blue-400', bg: 'bg-blue-100/70', text: 'text-blue-700' },
+                          { border: 'border-purple-400', bg: 'bg-purple-100/70', text: 'text-purple-700' },
+                          { border: 'border-amber-400', bg: 'bg-amber-100/70', text: 'text-amber-700' },
                         ];
-                        const colorScheme = colors[index % colors.length];
+                        // Get color based on field's assigned role (party)
+                        const roleIndex = field.role ? parseInt(field.role) - 1 : 0;
+                        const colorScheme = colors[roleIndex % colors.length];
 
                         return (
                           <div
@@ -263,10 +264,6 @@ export default function TemplateDetail() {
               <h3 className="font-semibold text-slate-900 mb-4">Template Details</h3>
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-500">Category</span>
-                  <span className="font-medium text-slate-700">{template.category || 'Uncategorized'}</span>
-                </div>
-                <div className="flex items-center justify-between">
                   <span className="text-slate-500">Created</span>
                   <span className="font-medium text-slate-700">{template.createdAt ? new Date(template.createdAt).toLocaleDateString() : 'N/A'}</span>
                 </div>
@@ -291,53 +288,40 @@ export default function TemplateDetail() {
               <div className="bg-white rounded-xl border border-slate-200/60 p-5">
                 <h3 className="font-semibold text-slate-900 mb-4">Party Roles</h3>
                 <div className="space-y-3">
-                  {template.parties.map((party, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-medium">
-                          {index + 1}
-                        </span>
-                        <span className="font-medium text-slate-700">{party.name || party.role}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {party.required ? (
-                          <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 text-xs">
-                            Required
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-slate-500 text-xs">
-                            Optional
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Signature Fields */}
-            {template.fields && Array.isArray(template.fields) && template.fields.length > 0 && (
-              <div className="bg-white rounded-xl border border-slate-200/60 p-5">
-                <h3 className="font-semibold text-slate-900 mb-4">Signature Fields</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {(() => {
-                    const fieldCounts = template.fields.reduce((acc, field) => {
-                      acc[field.type] = (acc[field.type] || 0) + 1;
-                      return acc;
-                    }, {});
+                  {template.parties.map((party, index) => {
+                    // Color scheme matching signature overlay colors - only left border colored
+                    const partyColors = [
+                      { border: 'border-l-indigo-500' },
+                      { border: 'border-l-emerald-500' },
+                      { border: 'border-l-purple-500' },
+                      { border: 'border-l-amber-500' },
+                    ];
+                    // Use saved color index or default based on position
+                    const colorIndex = party.colorIndex !== undefined ? party.colorIndex : index;
+                    const colorScheme = partyColors[colorIndex % partyColors.length];
 
-                    return Object.entries(fieldCounts).map(([type, count]) => (
-                      <div key={type} className="p-3 bg-slate-50 rounded-lg text-center">
-                        <p className="text-2xl font-bold text-slate-900">{count}</p>
-                        <p className="text-xs text-slate-500 capitalize">{type}</p>
+                    // Count signatures allocated to this signer
+                    const signatureCount = template.fields ? template.fields.filter(
+                      field => field.role === party.id.toString() || field.role === (index + 1).toString()
+                    ).length : 0;
+
+                    return (
+                      <div
+                        key={index}
+                        className={`flex items-center justify-between p-3 bg-slate-50 rounded-r-lg border-l-4 ${colorScheme.border}`}
+                      >
+                        <span className="font-medium text-slate-700">{party.name || party.role}</span>
+                        <Badge variant="outline" className="text-slate-600 text-xs">
+                          {signatureCount} {signatureCount === 1 ? 'signature' : 'signatures'}
+                        </Badge>
                       </div>
-                    ));
-                  })()}
+                    );
+                  })}
                 </div>
               </div>
             )}
             
+                        
             {/* Version History */}
             <div className="bg-white rounded-xl border border-slate-200/60 p-5">
               <div className="flex items-center justify-between mb-4">
@@ -345,7 +329,7 @@ export default function TemplateDetail() {
               </div>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 rounded-full mt-2 bg-indigo-500" />
+                  <div className="w-2 h-2 rounded-full mt-2 bg-slate-500" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-slate-700">v{template.version || '1.0'}</span>

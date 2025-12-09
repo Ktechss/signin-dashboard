@@ -24,7 +24,6 @@ export default function TemplateCard({ template, onClick, className }) {
   const {
     id,
     name,
-    category,
     status,
     version,
     usageCount,
@@ -77,12 +76,9 @@ export default function TemplateCard({ template, onClick, className }) {
       {/* Content */}
       <div className="p-4">
         <div className="flex items-start justify-between mb-3">
-          <div>
-            <h3 className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
-              {name}
-            </h3>
-            <p className="text-sm text-slate-500">{category}</p>
-          </div>
+          <h3 className="font-semibold text-slate-900 group-hover:text-slate-600 transition-colors line-clamp-1">
+            {name}
+          </h3>
           <StatusBadge status={status} size="sm" showDot={false} />
         </div>
         

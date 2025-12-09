@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { 
-  LayoutDashboard, 
-  FileText, 
-  Layers, 
-  PenTool, 
-  BarChart3, 
-  Bell, 
-  Settings, 
-  Users, 
+import {
+  LayoutDashboard,
+  FileSignature,
+  Signature,
+  Layers,
+  PenTool,
+  BarChart3,
+  Bell,
+  Settings,
+  Users,
   ChevronDown,
   ChevronRight,
   LogOut,
@@ -22,7 +23,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 
 const navigation = [
   { name: 'Dashboard', icon: LayoutDashboard, href: 'Dashboard' },
-  { name: 'Signing', icon: FileText, href: 'Current' },
+  { name: 'Signing', icon: Signature, href: 'Current' },
   { name: 'Blueprints', icon: Layers, href: 'Templates' },
 ];
 
@@ -50,7 +51,7 @@ export default function Sidebar({ currentPage, isAdmin = true }) {
           <CollapsibleTrigger asChild>
             <button className={cn(
               'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-              isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
             )}>
               <div className="flex items-center gap-3">
                 <item.icon className="w-5 h-5" />
@@ -79,8 +80,8 @@ export default function Sidebar({ currentPage, isAdmin = true }) {
         className={cn(
           'flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
           isChild && 'py-2',
-          currentPage === item.href 
-            ? 'bg-indigo-50 text-indigo-700' 
+          currentPage === item.href
+            ? 'bg-slate-100 text-slate-900'
             : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
         )}
       >
@@ -101,7 +102,7 @@ export default function Sidebar({ currentPage, isAdmin = true }) {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-slate-100">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
           <PenTool className="w-5 h-5 text-white" />
         </div>
         {!collapsed && (

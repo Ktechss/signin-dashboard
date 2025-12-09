@@ -119,7 +119,8 @@ export default function TemplateBuilder() {
       required: false,
       minCount: 0,
       maxCount: 1,
-      order: parties.length + 1
+      order: parties.length + 1,
+      colorIndex: parties.length // Save color index based on position
     }]);
   };
   
@@ -149,7 +150,8 @@ export default function TemplateBuilder() {
             required: true,
             minCount: 1,
             maxCount: 1,
-            order: i
+            order: i,
+            colorIndex: i - 1 // Save color index (0-based)
           });
         }
       }
@@ -165,7 +167,6 @@ export default function TemplateBuilder() {
       const template = saveTemplate({
         name: templateData.name || 'Untitled Blueprint',
         description: templateData.description,
-        category: 'general',
         tags: [],
         status: 'active',
         version: '1.0',
@@ -203,7 +204,6 @@ export default function TemplateBuilder() {
       const template = saveTemplate({
         name: templateData.name || 'Untitled Blueprint',
         description: templateData.description,
-        category: 'general',
         tags: [],
         status: 'draft',
         version: '0.1',
@@ -448,7 +448,7 @@ export default function TemplateBuilder() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-6 lg:p-8 overflow-hidden">
+      <div className="flex-1 overflow-hidden">
         {renderStepContent()}
       </div>
     </div>

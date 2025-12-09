@@ -254,17 +254,7 @@ export default function Journeys() {
           </div>
         </div>
         
-        {/* Info Box */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-          <div>
-            <p className="font-medium text-blue-800">Understanding Signing Requests</p>
-            <p className="text-sm text-blue-700">
-              Each signing request represents a verification attempt for a party. When verification fails (Rejected),
-              a new signing request can be created for the same party with an incremented attempt number.
-            </p>
-          </div>
-        </div>
+
       </div>
     </div>
   );
