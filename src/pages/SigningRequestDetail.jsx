@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { 
-  ArrowLeft, 
-  Copy, 
+import {
+  ArrowLeft,
+  Copy,
   Globe,
   FileText,
   ChevronDown,
@@ -16,9 +16,9 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import StatusBadge from '@/components/ui-custom/StatusBadge';
 
-// Mock journey detail data
-const journeyData = {
-  journeyToken: 'f3f10537-e95d-4ee4-85cd-069a7c0afc10',
+// Mock signing request detail data
+const requestData = {
+  requestToken: 'f3f10537-e95d-4ee4-85cd-069a7c0afc10',
   status: 'blocked',
   name: 'Kartik Naik',
   channel: 'Web',
@@ -29,7 +29,7 @@ const journeyData = {
   dob: '01/01/1970',
   createdAt: '05 Nov 2025 17:51:14',
   sandboxMode: true,
-  journeyType: 'ONBOARDING',
+  requestType: 'ONBOARDING',
   nationality: 'IND',
   duration: '23.709 s',
   lastUpdatedAt: '05 Nov 2025 17:51:38',
@@ -82,7 +82,7 @@ const journeyData = {
   },
 };
 
-export default function JourneyDetail() {
+export default function SigningRequestDetail() {
   const [expandedStep, setExpandedStep] = useState(null);
 
   const copyToClipboard = (text) => {
@@ -95,7 +95,7 @@ export default function JourneyDetail() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Link to={createPageUrl('Journeys')}>
+            <Link to={createPageUrl('current')}>
               <Button variant="ghost" size="sm" className="gap-2">
                 <ArrowLeft className="w-4 h-4" />
                 Back
@@ -103,49 +103,49 @@ export default function JourneyDetail() {
             </Link>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-slate-900">Signing Request Detail</h1>
-              <StatusBadge status={journeyData.status} />
+              <StatusBadge status={requestData.status} />
             </div>
           </div>
         </div>
 
-        {/* Journey Info Card */}
+        {/* Signing Request Info Card */}
         <div className="bg-white rounded-xl border border-slate-200/60 p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-5">
             {/* Left Column */}
             <div className="space-y-5">
               <div>
                 <p className="text-sm text-slate-500 mb-1">Name</p>
-                <p className="font-medium text-slate-900">{journeyData.name}</p>
+                <p className="font-medium text-slate-900">{requestData.name}</p>
               </div>
-              
+
               <div>
                 <p className="text-sm text-slate-500 uppercase text-xs tracking-wide mb-1">Channel</p>
                 <span className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-md text-sm">
                   <Globe className="w-4 h-4 text-slate-500" />
-                  {journeyData.channel} • {journeyData.channelVersion}
+                  {requestData.channel} • {requestData.channelVersion}
                 </span>
               </div>
-              
+
               <div>
                 <p className="text-sm text-slate-500 mb-1">Document</p>
                 <span className="inline-flex items-center bg-slate-800 text-white px-3 py-1 rounded-md text-sm">
-                  {journeyData.document}
+                  {requestData.document}
                 </span>
               </div>
-              
+
               <div>
                 <p className="text-sm text-slate-500 mb-1">DOB</p>
-                <p className="font-medium text-slate-900">{journeyData.dob}</p>
+                <p className="font-medium text-slate-900">{requestData.dob}</p>
               </div>
-              
+
               <div>
                 <p className="text-sm text-slate-500 mb-1">Created At</p>
-                <p className="font-medium text-slate-900">{journeyData.createdAt}</p>
+                <p className="font-medium text-slate-900">{requestData.createdAt}</p>
               </div>
-              
+
               <div>
                 <p className="text-sm text-slate-500 mb-1">SandBox Mode:</p>
-                {journeyData.sandboxMode ? (
+                {requestData.sandboxMode ? (
                   <span className="inline-flex items-center bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-sm font-medium">
                     Yes
                   </span>
@@ -162,38 +162,38 @@ export default function JourneyDetail() {
               <div>
                 <p className="text-sm text-slate-500 mb-1">Request Token</p>
                 <div className="flex items-center gap-2">
-                  <code className="font-mono text-sm text-slate-900">{journeyData.journeyToken}</code>
-                  <button 
-                    onClick={() => copyToClipboard(journeyData.journeyToken)}
+                  <code className="font-mono text-sm text-slate-900">{requestData.requestToken}</code>
+                  <button
+                    onClick={() => copyToClipboard(requestData.requestToken)}
                     className="p-1 hover:bg-slate-100 rounded"
                   >
                     <Copy className="w-4 h-4 text-slate-400" />
                   </button>
                 </div>
               </div>
-              
+
               <div>
                 <p className="text-sm text-slate-500 mb-1">Request Type</p>
                 <span className="inline-flex items-center bg-blue-100 text-blue-700 px-3 py-1 rounded-md text-sm font-medium">
-                  {journeyData.journeyType}
+                  {requestData.requestType}
                 </span>
               </div>
-              
+
               <div>
                 <p className="text-sm text-slate-500 mb-1">Nationality</p>
-                <p className="font-medium text-slate-900">{journeyData.nationality || '-'}</p>
+                <p className="font-medium text-slate-900">{requestData.nationality || '-'}</p>
               </div>
-              
+
               <div>
                 <p className="text-sm text-slate-500 mb-1">Duration</p>
-                <p className="font-medium text-slate-900">{journeyData.duration}</p>
+                <p className="font-medium text-slate-900">{requestData.duration}</p>
               </div>
-              
+
               <div>
                 <p className="text-sm text-slate-500 mb-1">Last Updated At</p>
-                <p className="font-medium text-slate-900">{journeyData.lastUpdatedAt}</p>
+                <p className="font-medium text-slate-900">{requestData.lastUpdatedAt}</p>
               </div>
-              
+
               <div>
                 <p className="text-sm text-slate-500 mb-1">Request Config</p>
                 <Button variant="outline" size="sm" className="gap-2">
@@ -240,17 +240,17 @@ export default function JourneyDetail() {
                 </TabsTrigger>
               </TabsList>
               
-              {journeyData.errorCount > 0 && (
+              {requestData.errorCount > 0 && (
                 <div className="flex items-center gap-1 text-red-600 text-sm">
                   <AlertTriangle className="w-4 h-4" />
-                  {journeyData.errorCount} Errors
+                  {requestData.errorCount} Errors
                 </div>
               )}
             </div>
 
             <TabsContent value="steps" className="m-0">
               <div className="divide-y divide-slate-100">
-                {journeyData.steps.map((step) => (
+                {requestData.steps.map((step) => (
                   <div key={step.id} className="p-5">
                     <div 
                       className="flex items-center justify-between cursor-pointer"
@@ -296,7 +296,7 @@ export default function JourneyDetail() {
 
             <TabsContent value="logs" className="m-0 p-5">
               <div className="space-y-2 font-mono text-sm">
-                {journeyData.logs.map((log, index) => (
+                {requestData.logs.map((log, index) => (
                   <div key={index} className={`flex items-start gap-3 p-2 rounded ${
                     log.level === 'error' ? 'bg-red-50 text-red-700' :
                     log.level === 'warning' ? 'bg-amber-50 text-amber-700' :
@@ -318,7 +318,7 @@ export default function JourneyDetail() {
 
             <TabsContent value="events" className="m-0 p-5">
               <div className="space-y-2">
-                {journeyData.events.map((event, index) => (
+                {requestData.events.map((event, index) => (
                   <div key={index} className="flex items-start gap-4 p-3 bg-slate-50 rounded-lg">
                     <span className="text-sm text-slate-400 font-mono">{event.timestamp}</span>
                     <span className="text-sm font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
@@ -331,34 +331,34 @@ export default function JourneyDetail() {
             </TabsContent>
 
             <TabsContent value="contract" className="m-0 p-5">
-              {journeyData.contract ? (
+              {requestData.contract ? (
                 <div className="bg-slate-50 rounded-lg p-5">
                   <div className="flex items-start justify-between">
                     <div className="space-y-4">
                       <div>
                         <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Contract Reference</p>
-                        <p className="font-mono text-sm font-medium text-slate-900">{journeyData.contract.reference}</p>
+                        <p className="font-mono text-sm font-medium text-slate-900">{requestData.contract.reference}</p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Contract Name</p>
-                        <p className="font-medium text-slate-900">{journeyData.contract.name}</p>
+                        <p className="font-medium text-slate-900">{requestData.contract.name}</p>
                       </div>
                       <div className="flex items-center gap-6">
                         <div>
                           <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Status</p>
-                          <StatusBadge status={journeyData.contract.status} size="sm" />
+                          <StatusBadge status={requestData.contract.status} size="sm" />
                         </div>
                         <div>
                           <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Created</p>
-                          <p className="text-sm text-slate-700">{journeyData.contract.createdAt}</p>
+                          <p className="text-sm text-slate-700">{requestData.contract.createdAt}</p>
                         </div>
                         <div>
                           <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Expires</p>
-                          <p className="text-sm text-amber-600">{journeyData.contract.expiresAt}</p>
+                          <p className="text-sm text-amber-600">{requestData.contract.expiresAt}</p>
                         </div>
                       </div>
                     </div>
-                    <Link to={createPageUrl(`ContractDetail?id=${journeyData.contract.id}`)}>
+                    <Link to={createPageUrl(`ContractDetail?id=${requestData.contract.id}`)}>
                       <Button variant="outline" className="gap-2">
                         <ExternalLink className="w-4 h-4" />
                         View Contract

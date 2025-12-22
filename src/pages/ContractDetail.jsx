@@ -47,7 +47,7 @@ const contract = {
 };
 
 // Mock linked signing requests (separate from parties)
-const linkedJourneys = [
+const linkedSigningRequests = [
   { token: 'TKN-8F2A-X9K1', status: 'authorised', date: 'Jan 16, 2024', device: 'Chrome on Windows' },
   { token: 'TKN-3B7C-M4P2', status: 'authorised', date: 'Jan 17, 2024', device: 'Safari on Mac' },
   { token: 'TKN-1A2B-C3D4', status: 'rejected', date: 'Jan 15, 2024', device: 'Firefox on Linux' },
@@ -130,7 +130,7 @@ export default function ContractDetail() {
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
-          <Link to={createPageUrl('Contracts')}>
+          <Link to={createPageUrl('current')}>
             <Button variant="ghost" size="sm" className="gap-2 mb-6 -ml-2 hover:bg-slate-100">
               <ArrowLeft className="w-4 h-4" />
               Back to Contracts
@@ -176,23 +176,23 @@ export default function ContractDetail() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl">
+              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
                 <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
                   <Clock className="w-5 h-5 text-amber-600" />
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Expires</p>
-                  <p className="text-sm font-semibold text-amber-600">{contract.expiresAt}</p>
+                  <p className="text-sm font-semibold text-slate-900">{contract.expiresAt}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-4 bg-emerald-50 rounded-xl">
+              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
                 <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
                   <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Signed</p>
-                  <p className="text-sm font-semibold text-emerald-600">{contract.signedCount} of {contract.totalParties}</p>
+                  <p className="text-sm font-semibold text-slate-900">{contract.signedCount} of {contract.totalParties}</p>
                 </div>
               </div>
 
@@ -237,11 +237,11 @@ export default function ContractDetail() {
               Activity Log
             </TabsTrigger>
             <TabsTrigger
-              value="journeys"
+              value="signingRequests"
               className="data-[state=active]:bg-white data-[state=active]:text-slate-900 rounded-lg px-4 py-2.5 text-slate-600 text-sm font-medium gap-2"
             >
               <Key className="w-4 h-4" />
-              Signing Requests ({linkedJourneys.length})
+              Signing Requests ({linkedSigningRequests.length})
             </TabsTrigger>
           </TabsList>
 
@@ -262,29 +262,20 @@ export default function ContractDetail() {
 
                       {/* Signatory */}
                       <div className="min-w-[180px]">
-                        <p className="text-xs text-slate-400 flex items-center gap-1.5 mb-1">
-                          <Users className="w-3.5 h-3.5" />
-                          SIGNATORY
-                        </p>
+                        <p className="text-xs text-slate-400 mb-1">SIGNATORY</p>
                         <p className="text-sm font-semibold text-slate-900">{party.name}</p>
                         <p className="text-xs text-slate-500">{party.email}</p>
                       </div>
 
                       {/* Role */}
                       <div className="min-w-[100px]">
-                        <p className="text-xs text-slate-400 flex items-center gap-1.5 mb-1">
-                          <Shield className="w-3.5 h-3.5" />
-                          ROLE
-                        </p>
+                        <p className="text-xs text-slate-400 mb-1">ROLE</p>
                         <p className="text-sm font-medium text-slate-700">{party.role}</p>
                       </div>
 
                       {/* Signed At */}
                       <div className="min-w-[180px]">
-                        <p className="text-xs text-slate-400 flex items-center gap-1.5 mb-1">
-                          <Clock className="w-3.5 h-3.5" />
-                          SIGNED AT
-                        </p>
+                        <p className="text-xs text-slate-400 mb-1">SIGNED AT</p>
                         <p className="text-sm text-slate-700">
                           {party.signedAt || <span className="text-slate-400">Not signed yet</span>}
                         </p>
@@ -313,6 +304,12 @@ export default function ContractDetail() {
                                 <Eye className="w-4 h-4 mr-2" />
                                 View Details
                               </DropdownMenuItem>
+                              {party.status === 'signed' && (
+                                <DropdownMenuItem>
+                                  <FileText className="w-4 h-4 mr-2" />
+                                  View Signed Document
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem>
                                 <Copy className="w-4 h-4 mr-2" />
                                 Copy Email
@@ -349,13 +346,13 @@ export default function ContractDetail() {
             </div>
           </TabsContent>
 
-          <TabsContent value="journeys" className="m-0 mt-6">
+          <TabsContent value="signingRequests" className="m-0 mt-6">
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
               <div className="p-6">
                 <div className="space-y-4">
-                  {linkedJourneys.map((journey) => (
+                  {linkedSigningRequests.map((request) => (
                     <div
-                      key={journey.token}
+                      key={request.token}
                       className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
                     >
                       <div className="flex items-center gap-4">
@@ -364,23 +361,23 @@ export default function ContractDetail() {
                         </div>
                         <div>
                           <code className="text-sm bg-white px-3 py-1.5 rounded-lg font-mono text-slate-700 border border-slate-200">
-                            {journey.token}
+                            {request.token}
                           </code>
                           <div className="flex items-center gap-4 mt-2">
                             <div className="flex items-center gap-1.5 text-xs text-slate-500">
                               <Calendar className="w-3 h-3" />
-                              <span>{journey.date}</span>
+                              <span>{request.date}</span>
                             </div>
                             <div className="flex items-center gap-1.5 text-xs text-slate-500">
                               <Shield className="w-3 h-3" />
-                              <span>{journey.device}</span>
+                              <span>{request.device}</span>
                             </div>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <StatusBadge status={journey.status} />
-                        <Link to={createPageUrl(`JourneyDetail?token=${journey.token}`)}>
+                        <StatusBadge status={request.status} />
+                        <Link to={createPageUrl(`SigningRequestDetail?token=${request.token}`)}>
                           <Button variant="outline" size="sm" className="gap-2">
                             <ExternalLink className="w-4 h-4" />
                             View Details

@@ -56,3 +56,6 @@ Thumbs.db
 # Debug
 *.tsbuildinfo
 .eslintcache
+
+#folder
+mock-server

@@ -1,65 +1,64 @@
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import Layout from "./Layout.jsx";
-
 import Dashboard from "./Dashboard";
-
 import Current from "./Current";
-
 import Contracts from "./Contracts";
-
 import ContractDetail from "./ContractDetail";
-
-import Journeys from "./Journeys";
-
+import SigningRequests from "./SigningRequests";
 import Templates from "./Templates";
-
 import TemplateBuilder from "./TemplateBuilder";
-
 import SignContract from "./SignContract";
-
 import Analytics from "./Analytics";
-
 import Notifications from "./Notifications";
-
 import Settings from "./Settings";
-
 import UserManagement from "./UserManagement";
-
 import TemplateDetail from "./TemplateDetail";
+import SigningRequestDetail from "./SigningRequestDetail";
+import APIKeys from "./APIKeys";
+import AuditLogs from "./AuditLogs";
+import Billing from "./Billing";
+import Login from "./Login";
+import GovernmentSearch from "./GovernmentSearch";
+import PlatformAnalytics from "./PlatformAnalytics";
+import PlatformAuditLogs from "./PlatformAuditLogs";
+import BlueprintGallery from "./BlueprintGallery";
+import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+import { getCurrentUser, logout as logoutUser, isAuthenticated } from '@/utils/userStorage';
+import { LanguageProvider } from '@/contexts/LanguageContext';
 
-import JourneyDetail from "./JourneyDetail";
+// Auth Context
+const AuthContext = createContext(null);
 
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth must be used within AuthProvider');
+    }
+    return context;
+};
 
 const PAGES = {
-
     Dashboard: Dashboard,
-
     Current: Current,
-
     Contracts: Contracts,
-    
     ContractDetail: ContractDetail,
-    
-    Journeys: Journeys,
-    
+    SigningRequests: SigningRequests,
     Templates: Templates,
-    
     TemplateBuilder: TemplateBuilder,
-    
     SignContract: SignContract,
-    
     Analytics: Analytics,
-    
     Notifications: Notifications,
-    
     Settings: Settings,
-    
     UserManagement: UserManagement,
-    
     TemplateDetail: TemplateDetail,
-    
-    JourneyDetail: JourneyDetail,
-    
+    SigningRequestDetail: SigningRequestDetail,
+    APIKeys: APIKeys,
+    AuditLogs: AuditLogs,
+    Billing: Billing,
+    GovernmentSearch: GovernmentSearch,
+    PlatformAnalytics: PlatformAnalytics,
+    PlatformAuditLogs: PlatformAuditLogs,
+    BlueprintGallery: BlueprintGallery,
 }
 
 function _getCurrentPage(url) {
@@ -75,55 +74,443 @@ function _getCurrentPage(url) {
     return pageName || Object.keys(PAGES)[0];
 }
 
-// Create a wrapper component that uses useLocation inside the Router context
+// Protected Route Component
+function ProtectedRoute({ children }) {
+    const { user } = useAuth();
+    const location = useLocation();
+
+    if (!user) {
+        return <Navigate to="/login" state={{ from: location }} replace />;
+    }
+
+    return children;
+}
+
+// Main content with authentication
 function PagesContent() {
     const location = useLocation();
     const currentPage = _getCurrentPage(location.pathname);
-    
+    const { user, handleLogout, selectedClient, handleClientSelect, handleBackToPlatform } = useAuth();
+
+    // If on login page and already authenticated, redirect based on selectedClient
+    if (location.pathname === '/login' && user) {
+        return <Navigate to="/" replace />;
+    }
+
+    // If not on login page and not authenticated, redirect to login
+    if (location.pathname !== '/login' && !user) {
+        return <Navigate to="/login" replace />;
+    }
+
     return (
-        <Layout currentPageName={currentPage}>
-            <Routes>            
-                
-                    <Route path="/" element={<Dashboard />} />
-                
+        <Routes>
+            <Route path="/login" element={<Login onLogin={(user) => window.location.reload()} />} />
 
-                <Route path="/Dashboard" element={<Dashboard />} />
+            <Route path="/" element={
+                <ProtectedRoute>
+                    {selectedClient ? (
+                        <Navigate to="/Dashboard" replace />
+                    ) : (
+                        <Navigate to="/PlatformAnalytics" replace />
+                    )}
+                </ProtectedRoute>
+            } />
 
-                <Route path="/Current" element={<Current />} />
+            <Route path="/Dashboard" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <Dashboard selectedClient={selectedClient} />
+                    </Layout>
+                </ProtectedRoute>
+            } />
 
-                <Route path="/Contracts" element={<Contracts />} />
-                
-                <Route path="/ContractDetail" element={<ContractDetail />} />
-                
-                <Route path="/Journeys" element={<Journeys />} />
-                
-                <Route path="/Templates" element={<Templates />} />
-                
-                <Route path="/TemplateBuilder" element={<TemplateBuilder />} />
-                
-                <Route path="/SignContract" element={<SignContract />} />
-                
-                <Route path="/Analytics" element={<Analytics />} />
-                
-                <Route path="/Notifications" element={<Notifications />} />
-                
-                <Route path="/Settings" element={<Settings />} />
-                
-                <Route path="/UserManagement" element={<UserManagement />} />
-                
-                <Route path="/TemplateDetail" element={<TemplateDetail />} />
-                
-                <Route path="/JourneyDetail" element={<JourneyDetail />} />
-                
-            </Routes>
-        </Layout>
+            <Route path="/Current" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <Current />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/Contracts" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <Contracts />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/ContractDetail" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <ContractDetail />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/SigningRequests" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <SigningRequests />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/Templates" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <Templates />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/TemplateBuilder" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <TemplateBuilder />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/SignContract" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <SignContract />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/Analytics" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <Analytics />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/Notifications" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <Notifications />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/Settings" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <Settings />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/UserManagement" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <UserManagement />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/TemplateDetail" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <TemplateDetail />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/SigningRequestDetail" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <SigningRequestDetail />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/APIKeys" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <APIKeys />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/AuditLogs" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <AuditLogs />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/Billing" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <Billing />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/GovernmentSearch" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <GovernmentSearch />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/PlatformAnalytics" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <PlatformAnalytics />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/PlatformAuditLogs" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <PlatformAuditLogs />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/BlueprintGallery" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <BlueprintGallery />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            {/* Catch-all redirect */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
     );
 }
 
 export default function Pages() {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [selectedClient, setSelectedClient] = useState(null);
+
+    useEffect(() => {
+        // Check for existing session
+        const currentUser = getCurrentUser();
+        setUser(currentUser);
+
+        // Restore selected client from localStorage
+        const savedClient = localStorage.getItem('selectedClient');
+        if (savedClient) {
+            try {
+                setSelectedClient(JSON.parse(savedClient));
+            } catch (e) {
+                localStorage.removeItem('selectedClient');
+            }
+        }
+
+        setLoading(false);
+    }, []);
+
+    const handleLogin = (userData) => {
+        setUser(userData);
+    };
+
+    const handleLogout = () => {
+        logoutUser();
+        setUser(null);
+        setSelectedClient(null);
+        // Clear selected client on logout
+        localStorage.removeItem('selectedClient');
+        window.location.href = '/login';
+    };
+
+    const handleClientSelect = (client) => {
+        setSelectedClient(client);
+        // Save to localStorage for persistence
+        localStorage.setItem('selectedClient', JSON.stringify(client));
+        // Navigate to Dashboard when client is selected
+        window.location.href = '/Dashboard';
+    };
+
+    const handleBackToPlatform = () => {
+        setSelectedClient(null);
+        // Clear from localStorage
+        localStorage.removeItem('selectedClient');
+        // Navigate to PlatformAnalytics when going back to platform
+        window.location.href = '/PlatformAnalytics';
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
     return (
-        <Router>
-            <PagesContent />
-        </Router>
+        <LanguageProvider>
+            <AuthContext.Provider value={{
+                user,
+                handleLogin,
+                handleLogout,
+                selectedClient,
+                handleClientSelect,
+                handleBackToPlatform
+            }}>
+                <Router>
+                    <PagesContent />
+                </Router>
+            </AuthContext.Provider>
+        </LanguageProvider>
     );
 }

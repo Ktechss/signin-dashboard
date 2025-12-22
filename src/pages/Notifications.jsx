@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils';
 const mockNotifications = [
   { id: 1, type: 'error', title: 'Contract Expired', description: 'Sales Agreement SA-2024-001 has expired without all signatures', contractId: 1, timestamp: '5 minutes ago', read: false, priority: 'high' },
   { id: 2, type: 'success', title: 'Signature Completed', description: 'John Smith has signed NDA-2024-089', contractId: 2, timestamp: '15 minutes ago', read: false, priority: 'normal' },
-  { id: 3, type: 'warning', title: 'Verification Failed', description: 'Lisa Park failed identity verification for Partnership Agreement', contractId: 4, journeyId: 'JRN-005', timestamp: '1 hour ago', read: false, priority: 'high' },
+  { id: 3, type: 'warning', title: 'Verification Failed', description: 'Lisa Park failed identity verification for Partnership Agreement', contractId: 4, signingRequestId: 'SR-005', timestamp: '1 hour ago', read: false, priority: 'high' },
   { id: 4, type: 'info', title: 'Reminder Sent', description: 'Automatic reminder sent to Bob Wilson for SA-2024-001', contractId: 1, timestamp: '2 hours ago', read: true, priority: 'normal' },
   { id: 5, type: 'success', title: 'Contract Completed', description: 'All parties have signed NDA - TechStart Inc', contractId: 2, timestamp: '3 hours ago', read: true, priority: 'normal' },
   { id: 6, type: 'warning', title: 'Expiring Soon', description: 'Employment Contract EC-2024-156 expires in 2 days', contractId: 3, timestamp: '5 hours ago', read: true, priority: 'medium' },
@@ -192,9 +192,9 @@ export default function Notifications() {
                                 View Contract
                               </Link>
                             )}
-                            {notification.journeyId && (
+                            {notification.signingRequestId && (
                               <span className="text-xs text-slate-500">
-                                Journey: {notification.journeyId}
+                                Request: {notification.signingRequestId}
                               </span>
                             )}
                           </div>
@@ -207,7 +207,7 @@ export default function Notifications() {
                               Remind
                             </Button>
                           )}
-                          {notification.type === 'error' && notification.journeyId && (
+                          {notification.type === 'error' && notification.signingRequestId && (
                             <Button size="sm" variant="outline" className="gap-1" onClick={(e) => e.stopPropagation()}>
                               <Phone className="w-3.5 h-3.5" />
                               Contact

@@ -34,7 +34,7 @@ export default function Contracts() {
 
   return (
     <div className="min-h-screen bg-slate-50/50">
-      <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      <div className="p-6 lg:p-8 max-w-8xl mx-auto space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Quick Sign</h1>

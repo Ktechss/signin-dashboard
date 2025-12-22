@@ -17,7 +17,9 @@ import {
   Eye,
   MoreHorizontal,
   CheckCircle2,
-  Layers
+  Layers,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +41,12 @@ export default function TemplateDetail() {
   const templateId = searchParams.get('id');
   const [template, setTemplate] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [numPages, setNumPages] = useState(null);
+
+  // Handle PDF load success to get page count
+  const onDocumentLoadSuccess = ({ numPages }) => {
+    setNumPages(numPages);
+  };
 
   useEffect(() => {
     const loadTemplate = async () => {
@@ -90,7 +98,7 @@ export default function TemplateDetail() {
   }
   return (
     <div className="min-h-screen bg-slate-50/50">
-      <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      <div className="p-6 lg:p-8 max-w-8xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div className="flex items-start gap-4">
@@ -169,36 +177,88 @@ export default function TemplateDetail() {
           {/* Document Preview */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl border border-slate-200/60 overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b border-slate-100">
-                <h3 className="font-semibold text-slate-900">Document Preview</h3>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Eye className="w-4 h-4" />
-                  Full Screen
-                </Button>
-              </div>
-              <div className="p-4 bg-slate-50">
+              <div className="p-6 bg-slate-50 max-h-[80vh] overflow-y-auto">
                 {(template.documentData || template.filePreview || template.preview) ? (
-                  <div className="flex justify-center">
-                    <div className="relative inline-block">
-                      {template.documentData?.type === 'application/pdf' ? (
-                        // Render PDF using react-pdf
-                        <Document
-                          file={template.documentData.data}
-                          onLoadError={(error) => {
-                            console.error('PDF load error:', error);
-                          }}
-                          loading={<div className="text-center p-8 text-slate-500">Loading PDF...</div>}
-                        >
-                          <Page
-                            pageNumber={1}
-                            width={600}
-                            renderTextLayer={false}
-                            renderAnnotationLayer={false}
-                            className="rounded-lg shadow-sm"
-                          />
-                        </Document>
-                      ) : (
-                        // Render image (JPEG/PNG)
+                  <div className="flex flex-col items-center">
+                    {template.documentData?.type === 'application/pdf' ? (
+                      // Render PDF using react-pdf - all pages
+                      <Document
+                        file={template.documentData.data}
+                        onLoadSuccess={onDocumentLoadSuccess}
+                        onLoadError={(error) => {
+                          console.error('PDF load error:', error);
+                        }}
+                        loading={<div className="text-center p-8 text-slate-500">Loading PDF...</div>}
+                      >
+                        <div className="flex flex-col items-center space-y-6">
+                          {Array.from({ length: numPages || template.documentData?.numPages || 1 }, (_, index) => {
+                            const pageNumber = index + 1;
+                            // Filter fields for this page
+                            const pageFields = template.fields?.filter(f => (f.page || 1) === pageNumber) || [];
+
+                            return (
+                              <div key={pageNumber} className="relative">
+                                {/* Page number badge */}
+                                {(numPages || template.documentData?.numPages || 1) > 1 && (
+                                  <div className="absolute top-2 right-2 bg-slate-900/70 text-white text-xs px-2 py-1 rounded z-10">
+                                    Page {pageNumber} of {numPages || template.documentData?.numPages || 1}
+                                  </div>
+                                )}
+                                <Page
+                                  pageNumber={pageNumber}
+                                  width={600}
+                                  renderTextLayer={false}
+                                  renderAnnotationLayer={false}
+                                  className="rounded-lg shadow-sm"
+                                />
+                                {/* Render field overlays for this page */}
+                                {pageFields.map((field) => {
+                                  const fieldTypes = {
+                                    signature: { icon: '✍️', color: 'indigo' },
+                                    initials: { icon: '📝', color: 'purple' },
+                                    date: { icon: '📅', color: 'emerald' },
+                                    text: { icon: '📄', color: 'blue' },
+                                    checkbox: { icon: '☑️', color: 'amber' },
+                                    number: { icon: '#️⃣', color: 'rose' },
+                                  };
+
+                                  const fieldInfo = fieldTypes[field.type] || fieldTypes.text;
+                                  // Use colors based on field's role/party assignment
+                                  const colors = [
+                                    { border: 'border-indigo-400', bg: 'bg-indigo-100/70', text: 'text-indigo-700' },
+                                    { border: 'border-emerald-400', bg: 'bg-emerald-100/70', text: 'text-emerald-700' },
+                                    { border: 'border-purple-400', bg: 'bg-purple-100/70', text: 'text-purple-700' },
+                                    { border: 'border-amber-400', bg: 'bg-amber-100/70', text: 'text-amber-700' },
+                                  ];
+                                  // Get color based on field's assigned role (party)
+                                  const roleIndex = field.role ? parseInt(field.role) - 1 : 0;
+                                  const colorScheme = colors[roleIndex % colors.length];
+
+                                  return (
+                                    <div
+                                      key={field.id}
+                                      className={`absolute border-2 border-dashed ${colorScheme.border} ${colorScheme.bg} rounded flex items-center justify-center`}
+                                      style={{
+                                        left: `${(field.x / 595) * 100}%`,
+                                        top: `${(field.y / 842) * 100}%`,
+                                        width: `${(field.width / 595) * 100}%`,
+                                        height: `${(field.height / 842) * 100}%`,
+                                      }}
+                                    >
+                                      <span className={`text-xs font-medium ${colorScheme.text}`}>
+                                        {fieldInfo.icon} {field.type.charAt(0).toUpperCase() + field.type.slice(1)}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </Document>
+                    ) : (
+                      // Render image (JPEG/PNG)
+                      <div className="relative inline-block">
                         <img
                           src={template.filePreview || template.preview || template.documentData?.thumbnail}
                           alt={template.name}
@@ -207,48 +267,46 @@ export default function TemplateDetail() {
                             console.error('Failed to load image:', e);
                           }}
                         />
-                      )}
-                      {/* Render field overlays */}
-                      {template.fields && Array.isArray(template.fields) && template.fields.map((field) => {
-                        const fieldTypes = {
-                          signature: { icon: '✍️', color: 'indigo' },
-                          initials: { icon: '📝', color: 'purple' },
-                          date: { icon: '📅', color: 'emerald' },
-                          text: { icon: '📄', color: 'blue' },
-                          checkbox: { icon: '☑️', color: 'amber' },
-                          number: { icon: '#️⃣', color: 'rose' },
-                        };
+                        {/* Render field overlays for images (all on page 1) */}
+                        {template.fields && Array.isArray(template.fields) && template.fields.map((field) => {
+                          const fieldTypes = {
+                            signature: { icon: '✍️', color: 'indigo' },
+                            initials: { icon: '📝', color: 'purple' },
+                            date: { icon: '📅', color: 'emerald' },
+                            text: { icon: '📄', color: 'blue' },
+                            checkbox: { icon: '☑️', color: 'amber' },
+                            number: { icon: '#️⃣', color: 'rose' },
+                          };
 
-                        const fieldInfo = fieldTypes[field.type] || fieldTypes.text;
-                        // Use colors based on field's role/party assignment
-                        const colors = [
-                          { border: 'border-indigo-400', bg: 'bg-indigo-100/70', text: 'text-indigo-700' },
-                          { border: 'border-emerald-400', bg: 'bg-emerald-100/70', text: 'text-emerald-700' },
-                          { border: 'border-purple-400', bg: 'bg-purple-100/70', text: 'text-purple-700' },
-                          { border: 'border-amber-400', bg: 'bg-amber-100/70', text: 'text-amber-700' },
-                        ];
-                        // Get color based on field's assigned role (party)
-                        const roleIndex = field.role ? parseInt(field.role) - 1 : 0;
-                        const colorScheme = colors[roleIndex % colors.length];
+                          const fieldInfo = fieldTypes[field.type] || fieldTypes.text;
+                          const colors = [
+                            { border: 'border-indigo-400', bg: 'bg-indigo-100/70', text: 'text-indigo-700' },
+                            { border: 'border-emerald-400', bg: 'bg-emerald-100/70', text: 'text-emerald-700' },
+                            { border: 'border-purple-400', bg: 'bg-purple-100/70', text: 'text-purple-700' },
+                            { border: 'border-amber-400', bg: 'bg-amber-100/70', text: 'text-amber-700' },
+                          ];
+                          const roleIndex = field.role ? parseInt(field.role) - 1 : 0;
+                          const colorScheme = colors[roleIndex % colors.length];
 
-                        return (
-                          <div
-                            key={field.id}
-                            className={`absolute border-2 border-dashed ${colorScheme.border} ${colorScheme.bg} rounded flex items-center justify-center`}
-                            style={{
-                              left: `${(field.x / 595) * 100}%`,
-                              top: `${(field.y / 842) * 100}%`,
-                              width: `${(field.width / 595) * 100}%`,
-                              height: `${(field.height / 842) * 100}%`,
-                            }}
-                          >
-                            <span className={`text-xs font-medium ${colorScheme.text}`}>
-                              {fieldInfo.icon} {field.type.charAt(0).toUpperCase() + field.type.slice(1)}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          return (
+                            <div
+                              key={field.id}
+                              className={`absolute border-2 border-dashed ${colorScheme.border} ${colorScheme.bg} rounded flex items-center justify-center`}
+                              style={{
+                                left: `${(field.x / 595) * 100}%`,
+                                top: `${(field.y / 842) * 100}%`,
+                                width: `${(field.width / 595) * 100}%`,
+                                height: `${(field.height / 842) * 100}%`,
+                              }}
+                            >
+                              <span className={`text-xs font-medium ${colorScheme.text}`}>
+                                {fieldInfo.icon} {field.type.charAt(0).toUpperCase() + field.type.slice(1)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <DocumentViewer />
@@ -300,20 +358,31 @@ export default function TemplateDetail() {
                     const colorIndex = party.colorIndex !== undefined ? party.colorIndex : index;
                     const colorScheme = partyColors[colorIndex % partyColors.length];
 
-                    // Count signatures allocated to this signer
-                    const signatureCount = template.fields ? template.fields.filter(
+                    // Get signatures allocated to this signer with page info
+                    const signerFields = template.fields ? template.fields.filter(
                       field => field.role === party.id.toString() || field.role === (index + 1).toString()
-                    ).length : 0;
+                    ) : [];
+                    const signatureCount = signerFields.length;
+
+                    // Get unique pages where this signer has signatures
+                    const signaturePages = [...new Set(signerFields.map(f => f.page || 1))].sort((a, b) => a - b);
 
                     return (
                       <div
                         key={index}
-                        className={`flex items-center justify-between p-3 bg-slate-50 rounded-r-lg border-l-4 ${colorScheme.border}`}
+                        className={`p-3 bg-slate-50 rounded-r-lg border-l-4 ${colorScheme.border}`}
                       >
-                        <span className="font-medium text-slate-700">{party.name || party.role}</span>
-                        <Badge variant="outline" className="text-slate-600 text-xs">
-                          {signatureCount} {signatureCount === 1 ? 'signature' : 'signatures'}
-                        </Badge>
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-slate-700">{party.name || party.role}</span>
+                          <Badge variant="outline" className="text-slate-600 text-xs">
+                            {signatureCount} {signatureCount === 1 ? 'signature' : 'signatures'}
+                          </Badge>
+                        </div>
+                        {signaturePages.length > 0 && (numPages || template.documentData?.numPages) > 1 && (
+                          <div className="mt-1.5 text-xs text-slate-500">
+                            Page{signaturePages.length > 1 ? 's' : ''}: {signaturePages.join(', ')}
+                          </div>
+                        )}
                       </div>
                     );
                   })}

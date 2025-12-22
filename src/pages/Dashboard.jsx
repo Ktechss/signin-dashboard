@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import {
@@ -8,95 +9,269 @@ import {
   ArrowRight,
   ArrowUpRight,
   Layers,
-  FileSignature
+  FileSignature,
+  TrendingUp,
+  TrendingDown,
+  Users,
+  Signature,
+  RefreshCw,
+  Loader2,
+  Calendar,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import StatusBadge from '@/components/ui-custom/StatusBadge';
+import { dashboardApi, analyticsApi, channelsApi } from '@/services/api';
+import { useFetch } from '@/hooks/useApi';
+import {
+  ClientSigningTrendChart,
+  SigningByChannelChart,
+  ContractStatusChart,
+  SigningDistributionChart,
+} from '@/components/analytics';
 
-// Stats data
-const stats = {
-  contracts: {
-    total: 847,
-    signed: 756,
-    pending: 64,
-    failed: 27
-  },
-  requests: {
-    total: 1234,
-    authorised: 1098,
-    pending: 68,
-    rejected: 68
-  }
-};
+export default function Dashboard({ selectedClient }) {
+  const [dateRange, setDateRange] = useState('30d');
+  const [selectedChannel, setSelectedChannel] = useState('all');
 
-// Recent contracts
-const recentContracts = [
-  { id: 1, reference: 'SA-2024-001', template: 'Sales Agreement', status: 'in_progress', parties: 3, signed: 2, date: 'Jan 17' },
-  { id: 2, reference: 'NDA-2024-089', template: 'NDA', status: 'signed', parties: 2, signed: 2, date: 'Jan 17' },
-  { id: 3, reference: 'EC-2024-156', template: 'Employment', status: 'pending', parties: 2, signed: 0, date: 'Jan 16' },
-  { id: 4, reference: 'PA-2024-023', template: 'Partnership', status: 'failed', parties: 3, signed: 1, date: 'Jan 16' },
-  { id: 5, reference: 'SVC-2024-045', template: 'Service Agreement', status: 'in_progress', parties: 2, signed: 1, date: 'Jan 15' },
-];
+  // Get client ID for filtering
+  const clientId = selectedClient?.id ? String(selectedClient.id) : null;
 
-// Recent signing requests
-const recentRequests = [
-  { id: 1, token: 'TKN-8F2A-X9K1', status: 'authorised', time: '2 hours ago' },
-  { id: 2, token: 'TKN-3B7C-M4P2', status: 'authorised', time: '5 hours ago' },
-  { id: 3, token: 'TKN-5D9E-Q6R3', status: 'pending', time: '1 day ago' },
-  { id: 4, token: 'TKN-7F1G-S8T4', status: 'rejected', time: '2 days ago' },
-];
+  // Fetch dashboard data filtered by client
+  const { data: kpiData, loading: kpiLoading, refetch: refetchKpi } = useFetch(
+    () => dashboardApi.getKpi(clientId),
+    [clientId]
+  );
 
-export default function Dashboard() {
+  const { data: trendsData, loading: trendsLoading, refetch: refetchTrends } = useFetch(
+    () => dashboardApi.getTrends(clientId),
+    [clientId]
+  );
+
+  const { data: recentContracts, loading: contractsLoading, refetch: refetchContracts } = useFetch(
+    () => dashboardApi.getRecentContracts(clientId),
+    [clientId]
+  );
+
+  const { data: recentActivity, loading: activityLoading, refetch: refetchActivity } = useFetch(
+    () => dashboardApi.getRecentActivity(clientId),
+    [clientId]
+  );
+
+  // Fetch analytics data filtered by client
+  const { data: dailyStatus, loading: dailyLoading } = useFetch(
+    () => analyticsApi.getDailyStatus(clientId),
+    [clientId]
+  );
+
+  const { data: byChannel, loading: channelLoading } = useFetch(
+    () => analyticsApi.getByChannel(clientId),
+    [clientId]
+  );
+
+  const { data: contractStatus, loading: contractStatusLoading } = useFetch(
+    () => analyticsApi.getContractStatus(clientId),
+    [clientId]
+  );
+
+  const { data: distribution, loading: distLoading } = useFetch(
+    () => analyticsApi.getDistribution(clientId),
+    [clientId]
+  );
+
+  const { data: channelsData } = useFetch(() => channelsApi.getAll(), []);
+
+  const channels = [
+    { id: 'all', name: 'All Channels' },
+    ...(channelsData || []).map(c => ({ id: String(c.id), name: c.name }))
+  ];
+
+  const handleRefresh = () => {
+    refetchKpi();
+    refetchTrends();
+    refetchContracts();
+    refetchActivity();
+  };
+
+  const isLoading = kpiLoading || trendsLoading;
+
+  // Helper to find KPI by id from the array
+  const getKpi = (id) => {
+    if (!kpiData || !Array.isArray(kpiData)) return { value: '0', trendValue: '0%' };
+    const kpi = kpiData.find(k => k.id === id);
+    return kpi || { value: '0', trendValue: '0%' };
+  };
+
+  // Extract KPI values
+  const kpis = {
+    totalJourneys: getKpi('total-journeys'),
+    completed: getKpi('contracts-signed'),
+    pending: { value: '44', trendValue: '-5.2%' }, // Not in API, using placeholder
+    failed: { value: '12', trendValue: '-2.1%' }, // Not in API, using placeholder
+    successRate: getKpi('success-rate'),
+    activeBlueprints: getKpi('active-blueprints'),
+  };
+
   return (
     <div className="min-h-screen bg-slate-50/50">
-      <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-8">
+      <div className="p-6 lg:p-8 max-w-8xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-            <p className="text-slate-500 mt-0.5">Overview of your signing activity</p>
+            <h1 className="text-2xl font-bold text-slate-900">Overview</h1>
+            <p className="text-slate-500 mt-0.5">
+              {selectedClient
+                ? `Signing activity and performance for ${selectedClient.name}`
+                : 'Monitor your signing activity and performance'
+              }
+            </p>
           </div>
-          <Link to={createPageUrl('TemplateBuilder')}>
-            <Button className="gap-2 bg-slate-900 hover:bg-slate-800">
-              <FileSignature className="w-4 h-4" />
-              New Contract
+          <div className="flex items-center gap-3">
+            <Select value={dateRange} onValueChange={setDateRange}>
+              <SelectTrigger className="w-[140px] bg-white">
+                <Calendar className="w-4 h-4 mr-2 text-slate-400" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">Last 7 days</SelectItem>
+                <SelectItem value="30d">Last 30 days</SelectItem>
+                <SelectItem value="90d">Last 90 days</SelectItem>
+                <SelectItem value="1y">Last year</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </Button>
-          </Link>
+            <Link to={createPageUrl('TemplateBuilder')}>
+              <Button className="gap-2 bg-slate-900 hover:bg-slate-800">
+                <FileSignature className="w-4 h-4" />
+                New Contract
+              </Button>
+            </Link>
+          </div>
         </div>
 
-        {/* Stats Grid */}
+        {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label="Total Contracts"
-            value={stats.contracts.total}
-            icon={FileText}
+          <KPICard
+            label="Total Signing Requests"
+            value={kpis.totalJourneys.value}
+            trend={kpis.totalJourneys.trendValue}
+            icon={Signature}
+            loading={kpiLoading}
           />
-          <StatCard
+          <KPICard
             label="Completed"
-            value={stats.contracts.signed}
+            value={kpis.completed.value}
+            trend={kpis.completed.trendValue}
             icon={CheckCircle2}
             iconColor="text-emerald-600"
+            iconBg="bg-emerald-50"
+            loading={kpiLoading}
           />
-          <StatCard
+          <KPICard
             label="Pending"
-            value={stats.contracts.pending}
+            value={kpis.pending.value}
+            trend={kpis.pending.trendValue}
             icon={Clock}
             iconColor="text-amber-600"
+            iconBg="bg-amber-50"
+            loading={kpiLoading}
           />
-          <StatCard
+          <KPICard
             label="Failed"
-            value={stats.contracts.failed}
+            value={kpis.failed.value}
+            trend={kpis.failed.trendValue}
             icon={XCircle}
             iconColor="text-red-500"
+            iconBg="bg-red-50"
+            loading={kpiLoading}
           />
         </div>
 
-        {/* Main Content */}
+        {/* Signing Trends - Full Width Area Chart */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="font-semibold text-slate-900 text-lg">Signing Trends</h3>
+              <p className="text-sm text-slate-500 mt-0.5">Track signing request performance over time</p>
+            </div>
+            <span className="text-xs text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full">Last 14 days</span>
+          </div>
+          {dailyLoading ? (
+            <div className="h-80 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+            </div>
+          ) : (
+            <ClientSigningTrendChart data={dailyStatus || []} />
+          )}
+        </div>
+
+        {/* Charts Row - 3 column grid */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Signing by Channel */}
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-slate-900">Signing by Channel</h3>
+              <span className="text-xs text-slate-400">Distribution</span>
+            </div>
+            {channelLoading ? (
+              <div className="h-64 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+              </div>
+            ) : (
+              <SigningByChannelChart data={byChannel || []} />
+            )}
+          </div>
+
+          {/* Contract Status */}
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-slate-900">Contract Status</h3>
+              <span className="text-xs text-slate-400">Current breakdown</span>
+            </div>
+            {contractStatusLoading ? (
+              <div className="h-64 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+              </div>
+            ) : (
+              <ContractStatusChart data={contractStatus || []} />
+            )}
+          </div>
+
+          {/* Signing Distribution */}
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-slate-900">Signing Distribution</h3>
+              <span className="text-xs text-slate-400">By status</span>
+            </div>
+            {distLoading ? (
+              <div className="h-64 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+              </div>
+            ) : (
+              <SigningDistributionChart data={distribution || []} />
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Section */}
         <div className="grid lg:grid-cols-5 gap-6">
           {/* Recent Contracts */}
-          <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200/80 overflow-hidden">
+          <div className="lg:col-span-3 bg-white rounded-xl border border-slate-200 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <h2 className="font-semibold text-slate-900">Recent Contracts</h2>
+              <h3 className="font-semibold text-slate-900">Recent Contracts</h3>
               <Link to={createPageUrl('Current')}>
                 <Button variant="ghost" size="sm" className="gap-1 text-slate-500 hover:text-slate-900">
                   View all
@@ -104,96 +279,107 @@ export default function Dashboard() {
                 </Button>
               </Link>
             </div>
-            <div className="divide-y divide-slate-100">
-              {recentContracts.map(contract => (
-                <Link
-                  key={contract.id}
-                  to={createPageUrl(`ContractDetail?id=${contract.id}`)}
-                  className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
-                      <FileText className="w-4 h-4 text-slate-600" />
+            {contractsLoading ? (
+              <div className="h-48 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {(recentContracts || []).slice(0, 5).map(contract => (
+                  <Link
+                    key={contract.id}
+                    to={createPageUrl(`ContractDetail?id=${contract.id}`)}
+                    className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
+                        <FileText className="w-4 h-4 text-slate-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">{contract.templateName || contract.template}</p>
+                        <p className="text-xs text-slate-500">{contract.reference}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">{contract.template}</p>
-                      <p className="text-xs text-slate-500">{contract.reference}</p>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right hidden sm:block">
+                        <p className="text-xs text-slate-500">{contract.signedCount || 0}/{contract.totalParties || 0} signed</p>
+                        <p className="text-xs text-slate-400">{contract.createdAt ? new Date(contract.createdAt).toLocaleDateString() : ''}</p>
+                      </div>
+                      <StatusBadge status={contract.status} size="sm" />
                     </div>
+                  </Link>
+                ))}
+                {(!recentContracts || recentContracts.length === 0) && (
+                  <div className="px-5 py-8 text-center text-slate-400">
+                    No recent contracts
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right hidden sm:block">
-                      <p className="text-xs text-slate-500">{contract.signed}/{contract.parties} signed</p>
-                      <p className="text-xs text-slate-400">{contract.date}</p>
-                    </div>
-                    <StatusBadge status={contract.status} size="sm" />
-                  </div>
-                </Link>
-              ))}
-            </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right Column */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Signing Requests Stats */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-semibold text-slate-900">Signing Requests</h2>
-                <Link to={createPageUrl('Current')}>
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-slate-500">
-                    <ArrowUpRight className="w-4 h-4" />
-                  </Button>
-                </Link>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <MiniStat label="Total" value={stats.requests.total} />
-                <MiniStat label="Authorised" value={stats.requests.authorised} color="emerald" />
-                <MiniStat label="Pending" value={stats.requests.pending} color="amber" />
-                <MiniStat label="Rejected" value={stats.requests.rejected} color="red" />
-              </div>
-            </div>
-
-            {/* Recent Requests */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden">
+            {/* Recent Activity */}
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100">
-                <h2 className="font-semibold text-slate-900">Latest Requests</h2>
+                <h3 className="font-semibold text-slate-900">Recent Activity</h3>
               </div>
-              <div className="divide-y divide-slate-100">
-                {recentRequests.map(request => (
-                  <div
-                    key={request.id}
-                    className="flex items-center justify-between px-5 py-3"
-                  >
-                    <div>
-                      <code className="text-xs bg-slate-100 px-2 py-0.5 rounded font-mono text-slate-700">
-                        {request.token}
-                      </code>
-                      <p className="text-xs text-slate-400 mt-1">{request.time}</p>
+              {activityLoading ? (
+                <div className="h-48 flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {(recentActivity || []).slice(0, 5).map((activity, idx) => (
+                    <div key={idx} className="flex items-center gap-3 px-5 py-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        activity.type === 'completed' ? 'bg-emerald-100' :
+                        activity.type === 'started' ? 'bg-blue-100' :
+                        activity.type === 'failed' ? 'bg-red-100' : 'bg-slate-100'
+                      }`}>
+                        {activity.type === 'completed' ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        ) : activity.type === 'failed' ? (
+                          <XCircle className="w-4 h-4 text-red-500" />
+                        ) : (
+                          <Signature className="w-4 h-4 text-blue-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-slate-700 truncate">{activity.description}</p>
+                        <p className="text-xs text-slate-400">{activity.time}</p>
+                      </div>
                     </div>
-                    <StatusBadge status={request.status} size="sm" />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                  {(!recentActivity || recentActivity.length === 0) && (
+                    <div className="px-5 py-8 text-center text-slate-400">
+                      No recent activity
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Quick Stats */}
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-5 text-white">
+            {/* Quick Stats Card */}
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-5 text-white">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <Layers className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-300">Active Blueprints</p>
-                  <p className="text-2xl font-bold">24</p>
+                  <p className="text-sm text-slate-300">This Month</p>
+                  <p className="text-2xl font-bold">{kpis.totalJourneys.value}</p>
                 </div>
               </div>
               <div className="flex items-center justify-between pt-4 border-t border-white/10">
                 <div>
                   <p className="text-xs text-slate-400">Success Rate</p>
-                  <p className="text-lg font-semibold">94.2%</p>
+                  <p className="text-lg font-semibold">{kpis.successRate.value}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-slate-400">Avg. Completion</p>
-                  <p className="text-lg font-semibold">1.8 days</p>
+                  <p className="text-xs text-slate-400">Avg. Time</p>
+                  <p className="text-lg font-semibold">4.2 hours</p>
                 </div>
               </div>
             </div>
@@ -204,35 +390,46 @@ export default function Dashboard() {
   );
 }
 
-// Stat Card Component
-function StatCard({ label, value, icon: Icon, iconColor = "text-slate-600" }) {
+// KPI Card Component
+function KPICard({ label, value, trend, icon: Icon, iconColor = "text-slate-600", iconBg = "bg-slate-50", loading }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 p-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-slate-500">{label}</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{value.toLocaleString()}</p>
+    <div className="bg-white rounded-xl border border-slate-200 p-5">
+      {loading ? (
+        <div className="h-16 flex items-center justify-center">
+          <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
         </div>
-        <div className="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center">
-          <Icon className={`w-5 h-5 ${iconColor}`} />
+      ) : (
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-slate-500">{label}</p>
+            <div className="flex items-end gap-2 mt-1">
+              <p className="text-2xl font-bold text-slate-900">{typeof value === 'number' ? value.toLocaleString() : value}</p>
+              <TrendIndicator trend={trend} />
+            </div>
+          </div>
+          <div className={`w-11 h-11 rounded-xl ${iconBg} flex items-center justify-center`}>
+            <Icon className={`w-5 h-5 ${iconColor}`} />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-// Mini Stat Component
-function MiniStat({ label, value, color }) {
-  const colorClasses = {
-    emerald: "bg-emerald-50 text-emerald-700",
-    amber: "bg-amber-50 text-amber-700",
-    red: "bg-red-50 text-red-700",
-  };
+// Trend Indicator Component
+function TrendIndicator({ trend }) {
+  if (!trend) return null;
+
+  const isPositive = trend.startsWith('+');
+  const isNegative = trend.startsWith('-');
 
   return (
-    <div className={`rounded-xl p-3 ${color ? colorClasses[color] : 'bg-slate-50 text-slate-700'}`}>
-      <p className="text-xs opacity-70">{label}</p>
-      <p className="text-lg font-bold">{value.toLocaleString()}</p>
-    </div>
+    <span className={`text-xs flex items-center gap-0.5 mb-0.5 ${
+      isPositive ? 'text-emerald-600' : isNegative ? 'text-red-500' : 'text-slate-400'
+    }`}>
+      {isPositive && <TrendingUp className="w-3 h-3" />}
+      {isNegative && <TrendingDown className="w-3 h-3" />}
+      {trend}
+    </span>
   );
 }

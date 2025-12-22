@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Document, Page, pdfjs } from 'react-pdf';
 import {
@@ -16,7 +16,9 @@ import {
   Upload,
   Plus,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  ChevronLeft,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,9 +49,9 @@ const allFieldTypes = [
   { id: 'number', icon: Hash, label: 'Number', color: 'bg-rose-500' },
 ];
 
-export default function FieldPlacement({ className, documentPreview, onFieldsChange, parties = [] }) {
+export default function FieldPlacement({ className, documentPreview, onFieldsChange, parties = [], initialFields = [] }) {
   const [zoom, setZoom] = useState(100);
-  const [fields, setFields] = useState([]);
+  const [fields, setFields] = useState(initialFields);
   const [selectedField, setSelectedField] = useState(null);
   const [draggedType, setDraggedType] = useState(null);
   const [draggingField, setDraggingField] = useState(null);
@@ -58,6 +60,22 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [expandedSigners, setExpandedSigners] = useState({});
   const [selectedSigner, setSelectedSigner] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [initialized, setInitialized] = useState(false);
+
+  // Initialize fields from initialFields when component mounts or initialFields changes
+  useEffect(() => {
+    if (initialFields.length > 0 && !initialized) {
+      setFields(initialFields);
+      setInitialized(true);
+    }
+  }, [initialFields, initialized]);
+
+  // Get total pages from document preview
+  const totalPages = documentPreview?.numPages || 1;
+
+  // Filter fields for current page only
+  const currentPageFields = fields.filter(f => (f.page || 1) === currentPage);
 
   // Group fields by signer/role
   const getFieldsGroupedBySigner = () => {
@@ -176,6 +194,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
         id: Date.now(),
         x: fieldToCopy.x + 20, // Offset slightly so it's visible
         y: fieldToCopy.y + 20,
+        page: currentPage, // Copy to current page
       };
       updateFields([...fields, newField]);
       setSelectedField(newField.id);
@@ -197,6 +216,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
       height: 60,
       role: assignedRole,
       required: true,
+      page: currentPage, // Add page property
     };
 
     updateFields([...fields, newSignature]);
@@ -266,8 +286,34 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
               <ZoomIn className="w-4 h-4" />
             </Button>
           </div>
+          {/* Page Navigation */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-500">Page 1 of 3</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <div className="flex items-center gap-1.5 px-2">
+              <FileText className="w-4 h-4 text-slate-400" />
+              <span className="text-sm text-slate-600">
+                Page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages}</span>
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            {/* Fields count for current page */}
+            <span className="text-xs text-slate-400 ml-2">
+              ({currentPageFields.length} field{currentPageFields.length !== 1 ? 's' : ''} on this page)
+            </span>
           </div>
         </div>
         
@@ -313,7 +359,8 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                     width: draggedType === 'signature' ? 180 : 120,
                     height: draggedType === 'signature' ? 60 : 30,
                     role: assignedRole,
-                    required: true
+                    required: true,
+                    page: currentPage, // Add page property
                   }]);
                   setDraggedType(null);
                 }
@@ -332,7 +379,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                       loading={<div className="absolute inset-0 flex items-center justify-center bg-white"><div className="text-slate-500">Loading PDF...</div></div>}
                     >
                       <Page
-                        pageNumber={1}
+                        pageNumber={currentPage}
                         width={595 * (zoom / 100)}
                         renderTextLayer={false}
                         renderAnnotationLayer={false}
@@ -365,8 +412,8 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                 </div>
               )}
 
-              {/* Placed Fields */}
-              {fields.map(field => {
+              {/* Placed Fields - Only show fields for current page */}
+              {currentPageFields.map(field => {
                 const fieldType = allFieldTypes.find(f => f.id === field.type);
 
                 // Get color based on assigned party/role
@@ -542,6 +589,10 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                                 onClick={() => {
                                   toggleSignerExpanded(field.id);
                                   setSelectedField(field.id);
+                                  // Navigate to the page where this field is
+                                  if (field.page && field.page !== currentPage) {
+                                    setCurrentPage(field.page);
+                                  }
                                 }}
                               >
                                 <div className="flex items-center gap-2">
@@ -549,6 +600,11 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                                   <span className="text-sm font-medium text-slate-700">
                                     {fieldType?.label} {index + 1}
                                   </span>
+                                  {totalPages > 1 && (
+                                    <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                                      P{field.page || 1}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <Button
@@ -647,6 +703,31 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                                         placeholder="e.g., Sign here..."
                                       />
                                     </div>
+
+                                    {/* Page selector for multi-page documents */}
+                                    {totalPages > 1 && (
+                                      <div className="space-y-1">
+                                        <Label className="text-xs">Page</Label>
+                                        <Select
+                                          value={(field.page || 1).toString()}
+                                          onValueChange={(value) => {
+                                            updateField(field.id, { page: parseInt(value) });
+                                            setCurrentPage(parseInt(value));
+                                          }}
+                                        >
+                                          <SelectTrigger className="h-8 text-xs">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {Array.from({ length: totalPages }, (_, i) => (
+                                              <SelectItem key={i + 1} value={(i + 1).toString()}>
+                                                Page {i + 1}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               )}

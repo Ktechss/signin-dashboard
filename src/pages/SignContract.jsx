@@ -882,7 +882,7 @@ export default function SignContract() {
     <div className="min-h-screen bg-slate-50/50 pb-24">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-8xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link to={createPageUrl('Dashboard')}>
@@ -923,7 +923,7 @@ export default function SignContract() {
       
       {/* Footer Navigation - Single Line */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-4 px-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-6">
+        <div className="max-w-8xl mx-auto flex items-center justify-between gap-6">
           {/* Previous Button */}
           <Button
             variant="outline"

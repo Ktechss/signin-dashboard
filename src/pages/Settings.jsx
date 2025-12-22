@@ -1,24 +1,26 @@
-import React, { useState } from 'react';
-import { 
-  User, 
-  Bell, 
-  Shield, 
-  Palette, 
-  Globe, 
+import { useState, useEffect } from 'react';
+import {
   Key,
-  Mail,
-  Phone,
-  Building,
   Save,
-  Moon,
-  Sun,
-  Monitor
+  Layers,
+  Plus,
+  Trash2,
+  Edit2,
+  MoreHorizontal,
+  CheckCircle2,
+  AlertCircle,
+  UserPlus,
+  User,
+  Bell,
+  Shield,
+  Building,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -26,55 +28,155 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import {
+  getChannels,
+  saveChannel,
+  updateChannel,
+  deleteChannel,
+  getAppSettings,
+  updateAppSettings,
+} from '@/utils/userStorage';
+
+// Settings navigation items
+const settingsNavItems = [
+  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'security', label: 'Security', icon: Shield },
+  { id: 'company', label: 'Company', icon: Building },
+  { id: 'channels', label: 'Channels', icon: Layers },
+  { id: 'onboarding', label: 'Onboarding', icon: UserPlus },
+];
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
-  const [theme, setTheme] = useState('system');
-  
-  const tabs = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'security', label: 'Security', icon: Shield },
-    { id: 'appearance', label: 'Appearance', icon: Palette },
-    { id: 'company', label: 'Company', icon: Building },
-  ];
-  
+
+  // Channels state
+  const [channels, setChannels] = useState([]);
+  const [isChannelDialogOpen, setIsChannelDialogOpen] = useState(false);
+  const [editingChannel, setEditingChannel] = useState(null);
+  const [channelForm, setChannelForm] = useState({ name: '', code: '', description: '' });
+
+  // App settings state
+  const [appSettings, setAppSettings] = useState({
+    allowNonRegisteredOnboarding: false,
+    requireEmailVerification: true,
+    requirePhoneVerification: false,
+    sessionTimeout: 30,
+  });
+
+  useEffect(() => {
+    loadChannels();
+    loadAppSettings();
+  }, []);
+
+  const loadChannels = () => {
+    setChannels(getChannels());
+  };
+
+  const loadAppSettings = () => {
+    setAppSettings(getAppSettings());
+  };
+
+  const handleSaveChannel = () => {
+    if (!channelForm.name.trim() || !channelForm.code.trim()) {
+      toast.error('Please fill in channel name and code');
+      return;
+    }
+
+    if (editingChannel) {
+      updateChannel(editingChannel.id, channelForm);
+      toast.success('Channel updated successfully');
+    } else {
+      saveChannel(channelForm);
+      toast.success('Channel created successfully');
+    }
+
+    setIsChannelDialogOpen(false);
+    setEditingChannel(null);
+    setChannelForm({ name: '', code: '', description: '' });
+    loadChannels();
+  };
+
+  const handleEditChannel = (channel) => {
+    setEditingChannel(channel);
+    setChannelForm({
+      name: channel.name,
+      code: channel.code,
+      description: channel.description || '',
+    });
+    setIsChannelDialogOpen(true);
+  };
+
+  const handleDeleteChannel = (id) => {
+    deleteChannel(id);
+    toast.success('Channel deleted');
+    loadChannels();
+  };
+
+  const handleSettingChange = (key, value) => {
+    const newSettings = { ...appSettings, [key]: value };
+    setAppSettings(newSettings);
+    updateAppSettings({ [key]: value });
+    toast.success('Setting updated');
+  };
+
   return (
     <div className="min-h-screen bg-slate-50/50">
-      <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+      <div className="p-6 lg:p-8 max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-          <p className="text-slate-500 mt-1">Manage your account and preferences.</p>
+          <p className="text-slate-500 mt-0.5">Manage your account and preferences</p>
         </div>
-        
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar */}
-          <div className="lg:w-64 flex-shrink-0">
+
+        <div className="flex gap-8">
+          {/* Settings Navigation */}
+          <div className="w-56 flex-shrink-0">
             <nav className="space-y-1">
-              {tabs.map(tab => (
+              {settingsNavItems.map((item) => (
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
                   className={cn(
-                    'w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                    activeTab === tab.id 
-                      ? 'bg-indigo-50 text-indigo-700' 
-                      : 'text-slate-600 hover:bg-slate-100'
+                    "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                    activeTab === item.id
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   )}
                 >
-                  <tab.icon className="w-5 h-5" />
-                  {tab.label}
+                  <item.icon className="w-4 h-4" />
+                  {item.label}
                 </button>
               ))}
             </nav>
           </div>
-          
-          {/* Content */}
+
+          {/* Settings Content */}
           <div className="flex-1 min-w-0">
             {activeTab === 'profile' && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
@@ -273,100 +375,15 @@ export default function Settings() {
               </div>
             )}
             
-            {activeTab === 'appearance' && (
-              <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Appearance</h2>
-                  <p className="text-sm text-slate-500">Customize how the app looks and feels.</p>
-                </div>
-                
-                <Separator />
-                
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="font-medium text-slate-900 mb-4">Theme</h3>
-                    <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-4">
-                      {[
-                        { value: 'light', label: 'Light', icon: Sun },
-                        { value: 'dark', label: 'Dark', icon: Moon },
-                        { value: 'system', label: 'System', icon: Monitor },
-                      ].map(item => (
-                        <div key={item.value}>
-                          <RadioGroupItem
-                            value={item.value}
-                            id={item.value}
-                            className="peer sr-only"
-                          />
-                          <Label
-                            htmlFor={item.value}
-                            className={cn(
-                              'flex flex-col items-center justify-center p-4 border rounded-xl cursor-pointer transition-colors',
-                              theme === item.value 
-                                ? 'border-indigo-500 bg-indigo-50' 
-                                : 'border-slate-200 hover:bg-slate-50'
-                            )}
-                          >
-                            <item.icon className={cn(
-                              'w-6 h-6 mb-2',
-                              theme === item.value ? 'text-indigo-600' : 'text-slate-400'
-                            )} />
-                            <span className={theme === item.value ? 'text-indigo-700 font-medium' : 'text-slate-600'}>
-                              {item.label}
-                            </span>
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div>
-                    <h3 className="font-medium text-slate-900 mb-4">Language & Region</h3>
-                    <div className="grid grid-cols-2 gap-4 max-w-md">
-                      <div className="space-y-2">
-                        <Label>Language</Label>
-                        <Select defaultValue="en">
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="en">English</SelectItem>
-                            <SelectItem value="es">Spanish</SelectItem>
-                            <SelectItem value="fr">French</SelectItem>
-                            <SelectItem value="de">German</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Timezone</Label>
-                        <Select defaultValue="est">
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="est">Eastern Time (ET)</SelectItem>
-                            <SelectItem value="pst">Pacific Time (PT)</SelectItem>
-                            <SelectItem value="utc">UTC</SelectItem>
-                            <SelectItem value="gmt">GMT</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
             {activeTab === 'company' && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Company Information</h2>
                   <p className="text-sm text-slate-500">Manage your organization's details.</p>
                 </div>
-                
+
                 <Separator />
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="companyName">Company Name</Label>
@@ -409,7 +426,7 @@ export default function Settings() {
                     <Textarea id="address" defaultValue="123 Business Ave, Suite 100&#10;New York, NY 10001" rows={2} />
                   </div>
                 </div>
-                
+
                 <div className="flex justify-end">
                   <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
                     <Save className="w-4 h-4" />
@@ -418,9 +435,285 @@ export default function Settings() {
                 </div>
               </div>
             )}
+
+            {activeTab === 'channels' && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl border border-slate-200 p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="text-lg font-semibold text-slate-900">Channels</h2>
+                      <p className="text-sm text-slate-500">Manage departments and channels for blueprint categorization.</p>
+                    </div>
+                    <Button
+                      className="gap-2 bg-indigo-600 hover:bg-indigo-700"
+                      onClick={() => {
+                        setEditingChannel(null);
+                        setChannelForm({ name: '', code: '', description: '' });
+                        setIsChannelDialogOpen(true);
+                      }}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Channel
+                    </Button>
+                  </div>
+
+                  {channels.length > 0 ? (
+                    <div className="rounded-lg border border-slate-200 overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead>Name</TableHead>
+                            <TableHead>Code</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="w-12"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {channels.map(channel => (
+                            <TableRow key={channel.id} className="hover:bg-slate-50">
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Layers className="w-4 h-4 text-indigo-500" />
+                                  <span className="font-medium text-slate-900">{channel.name}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="bg-slate-50 text-slate-700">
+                                  {channel.code}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-slate-500 text-sm max-w-xs truncate">
+                                {channel.description || '-'}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    channel.status === 'active'
+                                      ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                      : 'bg-slate-100 text-slate-700 border-slate-200'
+                                  }
+                                >
+                                  {channel.status === 'active' ? (
+                                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                                  ) : (
+                                    <AlertCircle className="w-3 h-3 mr-1" />
+                                  )}
+                                  {channel.status?.charAt(0).toUpperCase() + channel.status?.slice(1)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="w-8 h-8">
+                                      <MoreHorizontal className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEditChannel(channel)}>
+                                      <Edit2 className="w-4 h-4 mr-2" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="text-red-600"
+                                      onClick={() => handleDeleteChannel(channel.id)}
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 border border-dashed border-slate-200 rounded-lg">
+                      <Layers className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                      <p className="text-slate-500">No channels configured</p>
+                      <p className="text-sm text-slate-400 mt-1">
+                        Create channels to categorize blueprints by department.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-slate-100 rounded-xl p-4">
+                  <p className="text-sm text-slate-600">
+                    <strong>Note:</strong> Channels are used to categorize blueprints and can be linked to API keys for access control.
+                    Examples: Loan, Credit Card, Account Opening, etc.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'onboarding' && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Onboarding Settings</h2>
+                    <p className="text-sm text-slate-500">Configure how new users can be onboarded to the platform.</p>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <UserPlus className="w-5 h-5 text-indigo-600" />
+                          <p className="font-medium text-slate-900">Allow Non-Registered Onboarding</p>
+                        </div>
+                        <p className="text-sm text-slate-500 mt-1 ml-7">
+                          Allow individuals who are not registered on the platform to be onboarded for signing.
+                          They will receive an invitation to complete the signing process.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={appSettings.allowNonRegisteredOnboarding}
+                        onCheckedChange={(checked) => handleSettingChange('allowNonRegisteredOnboarding', checked)}
+                      />
+                    </div>
+
+                    <Separator />
+
+                    <h3 className="font-medium text-slate-900">Verification Requirements</h3>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-slate-700">Email Verification</p>
+                          <p className="text-sm text-slate-500">Require email verification during onboarding</p>
+                        </div>
+                        <Switch
+                          checked={appSettings.requireEmailVerification}
+                          onCheckedChange={(checked) => handleSettingChange('requireEmailVerification', checked)}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-slate-700">Phone Verification</p>
+                          <p className="text-sm text-slate-500">Require phone/SMS verification during onboarding</p>
+                        </div>
+                        <Switch
+                          checked={appSettings.requirePhoneVerification}
+                          onCheckedChange={(checked) => handleSettingChange('requirePhoneVerification', checked)}
+                        />
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <h3 className="font-medium text-slate-900">Session Settings</h3>
+
+                    <div className="max-w-xs">
+                      <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
+                      <Select
+                        value={appSettings.sessionTimeout?.toString() || '30'}
+                        onValueChange={(value) => handleSettingChange('sessionTimeout', parseInt(value))}
+                      >
+                        <SelectTrigger className="mt-2">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="15">15 minutes</SelectItem>
+                          <SelectItem value="30">30 minutes</SelectItem>
+                          <SelectItem value="60">1 hour</SelectItem>
+                          <SelectItem value="120">2 hours</SelectItem>
+                          <SelectItem value="480">8 hours</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-slate-500 mt-1">
+                        How long until inactive users are automatically logged out.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-amber-800">Security Notice</p>
+                      <p className="text-sm text-amber-700 mt-1">
+                        Enabling non-registered onboarding may reduce security controls.
+                        Ensure you have proper verification requirements enabled.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Channel Dialog */}
+      <Dialog open={isChannelDialogOpen} onOpenChange={(open) => {
+        setIsChannelDialogOpen(open);
+        if (!open) {
+          setEditingChannel(null);
+          setChannelForm({ name: '', code: '', description: '' });
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingChannel ? 'Edit Channel' : 'Create Channel'}</DialogTitle>
+            <DialogDescription>
+              {editingChannel
+                ? 'Update the channel information below.'
+                : 'Add a new channel for categorizing blueprints and API access.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="channel-name">Channel Name</Label>
+              <Input
+                id="channel-name"
+                placeholder="e.g., Loan, Credit Card"
+                value={channelForm.name}
+                onChange={(e) => setChannelForm({ ...channelForm, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="channel-code">Channel Code</Label>
+              <Input
+                id="channel-code"
+                placeholder="e.g., LOAN, CC"
+                value={channelForm.code}
+                onChange={(e) => setChannelForm({ ...channelForm, code: e.target.value.toUpperCase() })}
+              />
+              <p className="text-xs text-slate-500">A short unique identifier for this channel.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="channel-description">Description (Optional)</Label>
+              <Textarea
+                id="channel-description"
+                placeholder="Describe the purpose of this channel..."
+                value={channelForm.description}
+                onChange={(e) => setChannelForm({ ...channelForm, description: e.target.value })}
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsChannelDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="gap-2 bg-indigo-600 hover:bg-indigo-700"
+              onClick={handleSaveChannel}
+            >
+              <Save className="w-4 h-4" />
+              {editingChannel ? 'Save Changes' : 'Create Channel'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -28,21 +28,21 @@ const mockContracts = [
   { id: 8, name: 'Consulting Agreement - Expert Advisors', reference: 'CA-2024-034', status: 'signed', template: 'Consulting', signedCount: 2, totalParties: 2, parties: [{ id: 1, name: 'Expert Advisors', status: 'signed' }, { id: 2, name: 'Finance Team', status: 'signed' }], expiresIn: null, createdAt: 'Jan 8, 2024', lastUpdated: 'Jan 14, 2024', priority: 'medium' },
 ];
 
-// Mock data for journeys
-const mockJourneys = [
-  { id: 'JRN-001', journeyToken: 'TKN-8F2A-X9K1', userName: 'John Smith', email: 'john@acme.com', contractId: 1, status: 'authorised', lastActivity: '2 hours ago', attemptNumber: 1, createdDate: 'Jan 16, 2024' },
-  { id: 'JRN-002', journeyToken: 'TKN-3B7C-M4P2', userName: 'Jane Doe', email: 'jane@company.com', contractId: 1, status: 'authorised', lastActivity: '1 day ago', attemptNumber: 1, createdDate: 'Jan 15, 2024' },
-  { id: 'JRN-003', journeyToken: 'TKN-5D9E-Q6R3', userName: 'Bob Wilson', email: 'bob@legal.com', contractId: 1, status: 'pending', lastActivity: '3 days ago', attemptNumber: 1, createdDate: 'Jan 15, 2024' },
-  { id: 'JRN-004', journeyToken: 'TKN-7F1G-S8T4', userName: 'Alice Chen', email: 'alice@techstart.com', contractId: 2, status: 'authorised', lastActivity: '5 hours ago', attemptNumber: 1, createdDate: 'Jan 14, 2024' },
-  { id: 'JRN-005', journeyToken: 'TKN-2H4I-U0V5', userName: 'Lisa Park', email: 'lisa@partner.com', contractId: 4, status: 'rejected', lastActivity: '2 days ago', attemptNumber: 1, createdDate: 'Jan 12, 2024' },
-  { id: 'JRN-006', journeyToken: 'TKN-9J6K-W2X6', userName: 'Lisa Park', email: 'lisa@partner.com', contractId: 4, status: 'authorised', lastActivity: '1 day ago', attemptNumber: 2, createdDate: 'Jan 13, 2024' },
-  { id: 'JRN-007', journeyToken: 'TKN-1L8M-Y4Z7', userName: 'Mike Johnson', email: 'mike@partner.com', contractId: 4, status: 'authorised', lastActivity: '3 days ago', attemptNumber: 1, createdDate: 'Jan 12, 2024' },
-  { id: 'JRN-008', journeyToken: 'TKN-3N0O-A6B8', userName: 'Sarah Miller', email: 'sarah@email.com', contractId: 3, status: 'pending', lastActivity: '4 hours ago', attemptNumber: 1, createdDate: 'Jan 13, 2024' },
-  { id: 'JRN-009', journeyToken: 'TKN-5P2Q-C8D9', userName: 'Dave Lee', email: 'dave@partner.com', contractId: 4, status: 'expired', lastActivity: '5 days ago', attemptNumber: 1, createdDate: 'Jan 10, 2024' },
-  { id: 'JRN-010', journeyToken: 'TKN-7R4S-E0F0', userName: 'Dave Lee', email: 'dave@partner.com', contractId: 4, status: 'pending', lastActivity: '1 hour ago', attemptNumber: 2, createdDate: 'Jan 18, 2024' },
+// Mock data for signing requests
+const mockSigningRequests = [
+  { id: 'SR-001', requestToken: 'TKN-8F2A-X9K1', userName: 'John Smith', email: 'john@acme.com', contractId: 1, status: 'authorised', lastActivity: '2 hours ago', attemptNumber: 1, createdDate: 'Jan 16, 2024' },
+  { id: 'SR-002', requestToken: 'TKN-3B7C-M4P2', userName: 'Jane Doe', email: 'jane@company.com', contractId: 1, status: 'authorised', lastActivity: '1 day ago', attemptNumber: 1, createdDate: 'Jan 15, 2024' },
+  { id: 'SR-003', requestToken: 'TKN-5D9E-Q6R3', userName: 'Bob Wilson', email: 'bob@legal.com', contractId: 1, status: 'pending', lastActivity: '3 days ago', attemptNumber: 1, createdDate: 'Jan 15, 2024' },
+  { id: 'SR-004', requestToken: 'TKN-7F1G-S8T4', userName: 'Alice Chen', email: 'alice@techstart.com', contractId: 2, status: 'authorised', lastActivity: '5 hours ago', attemptNumber: 1, createdDate: 'Jan 14, 2024' },
+  { id: 'SR-005', requestToken: 'TKN-2H4I-U0V5', userName: 'Lisa Park', email: 'lisa@partner.com', contractId: 4, status: 'rejected', lastActivity: '2 days ago', attemptNumber: 1, createdDate: 'Jan 12, 2024' },
+  { id: 'SR-006', requestToken: 'TKN-9J6K-W2X6', userName: 'Lisa Park', email: 'lisa@partner.com', contractId: 4, status: 'authorised', lastActivity: '1 day ago', attemptNumber: 2, createdDate: 'Jan 13, 2024' },
+  { id: 'SR-007', requestToken: 'TKN-1L8M-Y4Z7', userName: 'Mike Johnson', email: 'mike@partner.com', contractId: 4, status: 'authorised', lastActivity: '3 days ago', attemptNumber: 1, createdDate: 'Jan 12, 2024' },
+  { id: 'SR-008', requestToken: 'TKN-3N0O-A6B8', userName: 'Sarah Miller', email: 'sarah@email.com', contractId: 3, status: 'pending', lastActivity: '4 hours ago', attemptNumber: 1, createdDate: 'Jan 13, 2024' },
+  { id: 'SR-009', requestToken: 'TKN-5P2Q-C8D9', userName: 'Dave Lee', email: 'dave@partner.com', contractId: 4, status: 'expired', lastActivity: '5 days ago', attemptNumber: 1, createdDate: 'Jan 10, 2024' },
+  { id: 'SR-010', requestToken: 'TKN-7R4S-E0F0', userName: 'Dave Lee', email: 'dave@partner.com', contractId: 4, status: 'pending', lastActivity: '1 hour ago', attemptNumber: 2, createdDate: 'Jan 18, 2024' },
 ];
 
-const journeyStats = [
+const signingRequestStats = [
   { title: 'Total Signing Requests', value: '1,234', subtitle: 'All verification attempts', icon: Clock, iconColor: 'text-indigo-600', iconBg: 'bg-indigo-50' },
   { title: 'Authorised', value: '1,098', trend: 'up', trendValue: '+2.1%', icon: CheckCircle2, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
   { title: 'Rejected', value: '68', trend: 'down', trendValue: '-12%', icon: XCircle, iconColor: 'text-red-600', iconBg: 'bg-red-50' },
@@ -63,13 +63,13 @@ export default function Current() {
 
   const toggleAll = () => {
     setSelectedRows(prev =>
-      prev.length === mockJourneys.length ? [] : mockJourneys.map(j => j.id)
+      prev.length === mockSigningRequests.length ? [] : mockSigningRequests.map(r => r.id)
     );
   };
 
   return (
     <div className="min-h-screen bg-slate-50/50">
-      <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      <div className="p-6 lg:p-8 max-w-8xl mx-auto space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Signing</h1>
@@ -83,7 +83,7 @@ export default function Current() {
               <FileText className="w-4 h-4" />
               Quick Sign
             </TabsTrigger>
-            <TabsTrigger value="journeys" className="gap-2">
+            <TabsTrigger value="signingRequests" className="gap-2">
               <Clock className="w-4 h-4" />
               Signing Requests
             </TabsTrigger>
@@ -192,11 +192,11 @@ export default function Current() {
             )}
           </TabsContent>
 
-          {/* Journeys Tab */}
-          <TabsContent value="journeys" className="space-y-6 mt-6">
+          {/* Signing Requests Tab */}
+          <TabsContent value="signingRequests" className="space-y-6 mt-6">
             {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {journeyStats.map((stat, index) => (
+              {signingRequestStats.map((stat, index) => (
                 <KPICard key={index} {...stat} />
               ))}
             </div>
@@ -253,7 +253,7 @@ export default function Current() {
                     <TableRow className="bg-slate-50/50">
                       <TableHead className="w-12">
                         <Checkbox
-                          checked={selectedRows.length === mockJourneys.length}
+                          checked={selectedRows.length === mockSigningRequests.length}
                           onCheckedChange={toggleAll}
                         />
                       </TableHead>
@@ -265,27 +265,27 @@ export default function Current() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockJourneys.map(journey => (
+                    {mockSigningRequests.map(request => (
                       <TableRow
-                        key={journey.id}
+                        key={request.id}
                         className="hover:bg-slate-50/50 cursor-pointer"
                       >
                         <TableCell>
                           <Checkbox
-                            checked={selectedRows.includes(journey.id)}
-                            onCheckedChange={() => toggleRow(journey.id)}
+                            checked={selectedRows.includes(request.id)}
+                            onCheckedChange={() => toggleRow(request.id)}
                           />
                         </TableCell>
                         <TableCell>
                           <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono text-slate-700">
-                            {journey.journeyToken}
+                            {request.requestToken}
                           </code>
                         </TableCell>
                         <TableCell>
-                          <StatusBadge status={journey.status} size="sm" />
+                          <StatusBadge status={request.status} size="sm" />
                         </TableCell>
-                        <TableCell className="text-slate-500 text-sm">{journey.lastActivity}</TableCell>
-                        <TableCell className="text-slate-500 text-sm">{journey.createdDate}</TableCell>
+                        <TableCell className="text-slate-500 text-sm">{request.lastActivity}</TableCell>
+                        <TableCell className="text-slate-500 text-sm">{request.createdDate}</TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -294,7 +294,7 @@ export default function Current() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <Link to={createPageUrl(`JourneyDetail?token=${journey.journeyToken}`)}>
+                              <Link to={createPageUrl(`SigningRequestDetail?token=${request.requestToken}`)}>
                                 <DropdownMenuItem className="gap-2">
                                   <Eye className="w-4 h-4" />
                                   View Details

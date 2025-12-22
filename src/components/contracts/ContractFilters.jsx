@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import DateFilter from '@/components/ui-custom/DateFilter';
 
 export default function ContractFilters({
   filters,
@@ -29,6 +30,13 @@ export default function ContractFilters({
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
+        <DateFilter
+          value={filters?.dateRange}
+          onChange={(dateRange) => onFiltersChange?.({ ...filters, dateRange })}
+          placeholder="Filter by date"
+          className="w-[200px]"
+        />
+
         <Select
           value={filters?.status || 'all'}
           onValueChange={(value) => onFiltersChange?.({ ...filters, status: value })}

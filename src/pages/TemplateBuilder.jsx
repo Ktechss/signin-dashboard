@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
-import { saveTemplate } from '@/utils/templateStorage';
+import { saveTemplate, getTemplateById, updateTemplate } from '@/utils/templateStorage';
 import { Document, Page, pdfjs } from 'react-pdf';
 import {
   ArrowLeft,
@@ -38,9 +38,39 @@ const steps = [
   { id: 'fields', title: 'Signature Placement', description: 'Place signature fields' },
 ];
 
+// Clients list for org-specific blueprints
+const clients = [
+  { id: 1, name: 'ADCB Bank', abbr: 'AD' },
+  { id: 2, name: 'Emirates NBD', abbr: 'EN' },
+  { id: 3, name: 'First Abu Dhabi Bank', abbr: 'FA' },
+  { id: 4, name: 'Mashreq Bank', abbr: 'MB' },
+];
+
+const visibilityLabels = {
+  'org-specific': 'Org Specific',
+  'internal': 'Internal',
+  'public': 'Public',
+};
+
 export default function TemplateBuilder() {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(0);
+  const [searchParams] = useSearchParams();
+
+  // Read params from URL
+  const templateId = searchParams.get('id');
+  const visibilityParam = searchParams.get('visibility') || 'public';
+  const clientIdParam = searchParams.get('clientId');
+
+  // Check if we're in edit mode
+  const isEditMode = !!templateId;
+
+  // Get assigned client if org-specific
+  const [assignedClient, setAssignedClient] = useState(
+    clientIdParam ? clients.find(c => c.id === parseInt(clientIdParam)) : null
+  );
+  const [editVisibility, setEditVisibility] = useState(visibilityParam);
+
+  const [currentStep, setCurrentStep] = useState(isEditMode ? 1 : 0); // Start at step 1 for edit mode
   const [templateData, setTemplateData] = useState({
     name: '',
     description: '',
@@ -48,6 +78,61 @@ export default function TemplateBuilder() {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedPreview, setUploadedPreview] = useState(null);
   const [templateFields, setTemplateFields] = useState([]);
+  const [numPages, setNumPages] = useState(null);
+  const [isLoading, setIsLoading] = useState(isEditMode);
+  const [existingTemplate, setExistingTemplate] = useState(null);
+
+  // Load existing template if in edit mode
+  useEffect(() => {
+    const loadTemplate = async () => {
+      if (templateId) {
+        setIsLoading(true);
+        try {
+          // First try localStorage
+          let template = getTemplateById(templateId);
+
+          // If not found, try sample-blueprints.json
+          if (!template) {
+            const response = await fetch('/sample-blueprints.json');
+            const sampleBlueprints = await response.json();
+            template = sampleBlueprints.find(t => t.id.toString() === templateId.toString());
+          }
+
+          if (template) {
+            setExistingTemplate(template);
+            setTemplateData({
+              name: template.name || '',
+              description: template.description || '',
+            });
+            setUploadedPreview(template.documentData);
+            setTemplateFields(template.fields || []);
+            setParties(template.parties || []);
+            setNumPages(template.documentData?.numPages || 1);
+
+            // Set visibility info
+            if (template.visibility) {
+              setEditVisibility(template.visibility);
+            }
+            if (template.assignedClient) {
+              setAssignedClient(template.assignedClient);
+            }
+
+            // Set a mock file object for display
+            if (template.fileName) {
+              setUploadedFile({ name: template.fileName, size: 0 });
+            }
+          }
+        } catch (error) {
+          console.error('Error loading template:', error);
+          toast.error('Failed to load template');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadTemplate();
+  }, [templateId]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -60,10 +145,13 @@ export default function TemplateBuilder() {
         reader.onload = async (e) => {
           const pdfData = e.target.result;
 
-          // Generate thumbnail from first page
+          // Generate thumbnail from first page and get page count
           try {
             const loadingTask = pdfjs.getDocument(pdfData);
             const pdf = await loadingTask.promise;
+            const totalPages = pdf.numPages;
+            setNumPages(totalPages);
+
             const page = await pdf.getPage(1);
 
             // Create canvas for thumbnail
@@ -83,7 +171,8 @@ export default function TemplateBuilder() {
             setUploadedPreview({
               data: pdfData,
               type: file.type,
-              thumbnail: thumbnailData
+              thumbnail: thumbnailData,
+              numPages: totalPages
             });
           } catch (error) {
             console.error('Error generating PDF thumbnail:', error);
@@ -163,36 +252,51 @@ export default function TemplateBuilder() {
 
   const handleActivateTemplate = () => {
     try {
-      // Save blueprint to localStorage
-      const template = saveTemplate({
+      const templatePayload = {
         name: templateData.name || 'Untitled Blueprint',
         description: templateData.description,
-        tags: [],
+        tags: existingTemplate?.tags || [],
         status: 'active',
-        version: '1.0',
-        fileName: uploadedFile?.name,
+        version: isEditMode ? existingTemplate?.version || '1.0' : '1.0',
+        fileName: uploadedFile?.name || existingTemplate?.fileName,
         filePreview: uploadedPreview?.thumbnail || uploadedPreview?.data || uploadedPreview,
         preview: uploadedPreview?.thumbnail || uploadedPreview?.data || uploadedPreview,
         documentData: uploadedPreview,
         fields: templateFields,
         parties: parties,
+        visibility: editVisibility,
+        assignedClient: assignedClient,
         lastModified: 'Just now'
-      });
+      };
 
-      console.log('Blueprint activated:', template);
+      let template;
+      if (isEditMode && existingTemplate) {
+        // Update existing template
+        template = updateTemplate(existingTemplate.id, templatePayload);
+        console.log('Blueprint updated:', template);
+        toast.success('Blueprint updated successfully!', {
+          description: `"${templatePayload.name}" has been updated.`
+        });
+      } else {
+        // Save new template
+        template = saveTemplate(templatePayload);
+        console.log('Blueprint activated:', template);
+        toast.success('Blueprint activated successfully!', {
+          description: `"${template.name}" is now active and ready to use.`
+        });
+      }
 
-      // Show success message
-      toast.success('Blueprint activated successfully!', {
-        description: `"${template.name}" is now active and ready to use.`
-      });
-
-      // Navigate back to blueprints page after a brief delay
+      // Navigate back to appropriate page after a brief delay
       setTimeout(() => {
-        navigate(createPageUrl('Templates'));
+        if (editVisibility && editVisibility !== 'public') {
+          navigate('/BlueprintGallery');
+        } else {
+          navigate(createPageUrl('Templates'));
+        }
       }, 1000);
     } catch (error) {
       console.error('Error saving blueprint:', error);
-      toast.error('Failed to activate blueprint', {
+      toast.error('Failed to save blueprint', {
         description: 'Please try again.'
       });
     }
@@ -200,33 +304,44 @@ export default function TemplateBuilder() {
 
   const handleSaveAsDraft = () => {
     try {
-      // Save blueprint as draft to localStorage
-      const template = saveTemplate({
+      const templatePayload = {
         name: templateData.name || 'Untitled Blueprint',
         description: templateData.description,
-        tags: [],
+        tags: existingTemplate?.tags || [],
         status: 'draft',
-        version: '0.1',
-        fileName: uploadedFile?.name,
+        version: isEditMode ? existingTemplate?.version || '0.1' : '0.1',
+        fileName: uploadedFile?.name || existingTemplate?.fileName,
         filePreview: uploadedPreview?.thumbnail || uploadedPreview?.data || uploadedPreview,
         preview: uploadedPreview?.thumbnail || uploadedPreview?.data || uploadedPreview,
         documentData: uploadedPreview,
         fields: templateFields,
         parties: parties,
         currentStep: currentStep,
+        visibility: editVisibility,
+        assignedClient: assignedClient,
         lastModified: 'Just now'
-      });
+      };
 
-      console.log('Blueprint saved as draft:', template);
+      let template;
+      if (isEditMode && existingTemplate) {
+        template = updateTemplate(existingTemplate.id, templatePayload);
+        console.log('Blueprint draft updated:', template);
+      } else {
+        template = saveTemplate(templatePayload);
+        console.log('Blueprint saved as draft:', template);
+      }
 
-      // Show success message
       toast.success('Blueprint saved as draft!', {
         description: 'You can continue editing it later.'
       });
 
-      // Navigate back to blueprints page after a brief delay
+      // Navigate back to appropriate page after a brief delay
       setTimeout(() => {
-        navigate(createPageUrl('Templates'));
+        if (editVisibility && editVisibility !== 'public') {
+          navigate('/BlueprintGallery');
+        } else {
+          navigate(createPageUrl('Templates'));
+        }
       }, 1000);
     } catch (error) {
       console.error('Error saving draft:', error);
@@ -240,10 +355,10 @@ export default function TemplateBuilder() {
     switch (currentStep) {
       case 0:
         return (
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-8xl mx-auto">
             <div className={`grid grid-cols-1 gap-6 ${uploadedPreview ? 'lg:grid-cols-2' : ''}`}>
               {/* Left Column: Form */}
-              <div className={`space-y-6 ${!uploadedPreview ? 'max-w-4xl mx-auto' : ''}`}>
+              <div className={`space-y-6 mt-[2rem] ${!uploadedPreview ? 'max-w-4xl mx-auto' : ''}`}>
                 {/* Basic Info Section */}
                 <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
                   <h3 className="font-semibold text-slate-900">Blueprint Information</h3>
@@ -325,7 +440,13 @@ export default function TemplateBuilder() {
               {uploadedPreview && (
                 <div className="lg:sticky lg:top-24 lg:h-fit">
                   <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                    <div className="p-6 bg-slate-50 flex items-center justify-center">
+                    {/* Page count header for PDFs */}
+                    {uploadedPreview.type === 'application/pdf' && uploadedPreview.numPages > 1 && (
+                      <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 text-sm text-slate-600 text-center">
+                        {uploadedPreview.numPages} pages
+                      </div>
+                    )}
+                    <div className="p-6 bg-slate-50 max-h-[70vh] overflow-y-auto">
                       {uploadedPreview.type === 'application/pdf' ? (
                         <Document
                           file={uploadedPreview.data}
@@ -335,13 +456,24 @@ export default function TemplateBuilder() {
                           }}
                           loading={<div className="text-center p-4">Loading PDF...</div>}
                         >
-                          <Page
-                            pageNumber={1}
-                            scale={1}
-                            renderTextLayer={false}
-                            renderAnnotationLayer={false}
-                            className="max-w-full h-auto"
-                          />
+                          <div className="space-y-4">
+                            {Array.from({ length: uploadedPreview.numPages || 1 }, (_, index) => (
+                              <div key={index} className="relative">
+                                {uploadedPreview.numPages > 1 && (
+                                  <div className="absolute top-2 right-2 bg-slate-900/70 text-white text-xs px-2 py-1 rounded z-10">
+                                    Page {index + 1}
+                                  </div>
+                                )}
+                                <Page
+                                  pageNumber={index + 1}
+                                  scale={1}
+                                  renderTextLayer={false}
+                                  renderAnnotationLayer={false}
+                                  className="max-w-full h-auto shadow-md"
+                                />
+                              </div>
+                            ))}
+                          </div>
                         </Document>
                       ) : (
                         <img
@@ -365,6 +497,7 @@ export default function TemplateBuilder() {
               documentPreview={uploadedPreview}
               onFieldsChange={setTemplateFields}
               parties={parties}
+              initialFields={templateFields}
             />
           </div>
         );
@@ -374,21 +507,48 @@ export default function TemplateBuilder() {
     }
   };
   
+  // Show loading state while loading template in edit mode
+  if (isLoading) {
+    return (
+      <div className="h-screen bg-slate-50/50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-slate-300 border-t-slate-600 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-600">Loading blueprint...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen bg-slate-50/50 flex flex-col">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-20 flex-shrink-0">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-8xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between gap-8">
             {/* Left: Back button and Title */}
             <div className="flex items-center gap-4">
-              <Link to={createPageUrl('Templates')}>
+              <Link to={editVisibility && editVisibility !== 'public' ? '/BlueprintGallery' : createPageUrl('Templates')}>
                 <Button variant="ghost" size="icon">
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
               </Link>
               <div>
-                <h1 className="font-semibold text-slate-900">Create Blueprint</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="font-semibold text-slate-900">
+                    {isEditMode ? 'Edit Blueprint' : 'Create Blueprint'}
+                  </h1>
+                  {/* Visibility Badge */}
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                    editVisibility === 'org-specific'
+                      ? 'bg-blue-100 text-blue-700'
+                      : editVisibility === 'internal'
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'bg-emerald-100 text-emerald-700'
+                  }`}>
+                    {visibilityLabels[editVisibility] || 'Public'}
+                    {assignedClient && ` - ${assignedClient.name}`}
+                  </span>
+                </div>
                 <p className="text-sm text-slate-500">Step {currentStep + 1} of {steps.length}</p>
               </div>
             </div>
@@ -432,7 +592,7 @@ export default function TemplateBuilder() {
                   onClick={handleActivateTemplate}
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  Activate Blueprint
+                  {isEditMode ? 'Update Blueprint' : 'Activate Blueprint'}
                 </Button>
               ) : (
                 <Button

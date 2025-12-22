@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Hash,
   FileCheck,
+  FileText,
   Bell,
   Send,
   Eye,
@@ -18,7 +19,8 @@ import {
   MailOpen,
   RefreshCw,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ExternalLink
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -247,6 +249,15 @@ function DefaultPartyContent({ record }) {
             )}
           </div>
         </div>
+      )}
+
+      {/* View Signed Document Button for signed */}
+      {record.status === 'signed' && (
+        <Button className="w-full gap-2 bg-slate-900 hover:bg-slate-800 h-11 rounded-xl">
+          <FileText className="w-4 h-4" />
+          View Signed Document
+          <ExternalLink className="w-3.5 h-3.5 ml-auto opacity-50" />
+        </Button>
       )}
 
       {/* Send Reminder Button for pending */}
