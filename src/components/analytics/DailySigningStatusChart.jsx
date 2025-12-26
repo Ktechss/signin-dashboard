@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { CheckCircle2, XCircle, LogOut, Clock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // Status colors matching the reference design
 const STATUS_COLORS = {
@@ -18,10 +19,16 @@ const STATUS_COLORS = {
 };
 
 export default function DailySigningStatusChart({ data = [] }) {
+  const { t } = useTranslation();
+  const abandonedLabel = t('common.abandoned');
+  const expiredLabel = t('common.expired');
+  const rejectedLabel = t('common.rejected');
+  const completedLabel = t('common.completed');
+
   return (
     <>
       <p className="text-sm text-slate-500 mb-4">
-        Breakdown of signing request statuses per day.
+        {t('common.breakdown_of_signing_request_statuses_per_day')}
       </p>
       <ResponsiveContainer width="100%" height={280}>
         <BarChart data={data}>
@@ -36,10 +43,10 @@ export default function DailySigningStatusChart({ data = [] }) {
               boxShadow: '0 4px 20px -2px rgb(0 0 0 / 0.1)',
             }}
           />
-          <Bar dataKey="abandoned" stackId="a" fill={STATUS_COLORS.abandoned} name="Abandoned" />
-          <Bar dataKey="expired" stackId="a" fill={STATUS_COLORS.expired} name="Expired" />
-          <Bar dataKey="rejected" stackId="a" fill={STATUS_COLORS.rejected} name="Rejected" />
-          <Bar dataKey="completed" stackId="a" fill={STATUS_COLORS.completed} name="Completed" radius={[2, 2, 0, 0]} />
+          <Bar dataKey="abandoned" stackId="a" fill={STATUS_COLORS.abandoned} name={abandonedLabel} />
+          <Bar dataKey="expired" stackId="a" fill={STATUS_COLORS.expired} name={expiredLabel} />
+          <Bar dataKey="rejected" stackId="a" fill={STATUS_COLORS.rejected} name={rejectedLabel} />
+          <Bar dataKey="completed" stackId="a" fill={STATUS_COLORS.completed} name={completedLabel} radius={[2, 2, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
 
@@ -48,22 +55,22 @@ export default function DailySigningStatusChart({ data = [] }) {
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: STATUS_COLORS.completed }} />
           <CheckCircle2 className="w-3 h-3 text-slate-400" />
-          <span className="text-slate-600 uppercase tracking-wide">Completed</span>
+          <span className="text-slate-600 uppercase tracking-wide">{completedLabel}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: STATUS_COLORS.rejected }} />
           <XCircle className="w-3 h-3 text-slate-400" />
-          <span className="text-slate-600 uppercase tracking-wide">Rejected</span>
+          <span className="text-slate-600 uppercase tracking-wide">{rejectedLabel}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: STATUS_COLORS.abandoned }} />
           <LogOut className="w-3 h-3 text-slate-400" />
-          <span className="text-slate-600 uppercase tracking-wide">Abandoned</span>
+          <span className="text-slate-600 uppercase tracking-wide">{abandonedLabel}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: STATUS_COLORS.expired }} />
           <Clock className="w-3 h-3 text-slate-400" />
-          <span className="text-slate-600 uppercase tracking-wide">Expired</span>
+          <span className="text-slate-600 uppercase tracking-wide">{expiredLabel}</span>
         </div>
       </div>
     </>

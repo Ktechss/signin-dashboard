@@ -1,10 +1,11 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   CreditCard,
   Download,
   CheckCircle2,
   FileText,
-  TrendingUp,
   Users,
   Zap,
   Calendar,
@@ -58,12 +59,14 @@ const planFeatures = [
 ];
 
 export default function Billing() {
+  const { t } = useTranslation();
+  const { isRTL, language } = useLanguage();
   const contractsPercentage = (usage.contractsSigned / currentPlan.contractsIncluded) * 100;
   const apiCallsPercentage = (usage.apiCalls / currentPlan.apiCallsIncluded) * 100;
   const usersPercentage = (usage.usersActive / currentPlan.usersIncluded) * 100;
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString(language === 'ar' ? 'ar-AE' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -71,22 +74,21 @@ export default function Billing() {
   };
 
   const handleDownloadInvoice = (invoiceId) => {
-    // Simulate invoice download
-    console.log('Downloading invoice:', invoiceId);
+    // TODO: Implement invoice download
   };
 
   return (
     <div className="min-h-screen bg-slate-50/50">
       <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Billing</h1>
-            <p className="text-slate-500 mt-1">Manage your subscription and billing details.</p>
+        <div className={`flex flex-col md:flex-row md:items-center md:justify-between gap-4 ${isRTL ? 'md:flex-row-reverse' : ''}`}>
+          <div className={isRTL ? 'text-right' : ''}>
+            <h1 className="text-2xl font-bold text-slate-900">{t('billing.title')}</h1>
+            <p className="text-slate-500 mt-1">{t('billing.subtitle')}</p>
           </div>
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className={`gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
             <CreditCard className="w-4 h-4" />
-            Update Payment Method
+            {t('billing.updatePaymentMethod')}
           </Button>
         </div>
 

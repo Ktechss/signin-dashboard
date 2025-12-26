@@ -78,7 +78,6 @@ export default function TemplateBuilder() {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedPreview, setUploadedPreview] = useState(null);
   const [templateFields, setTemplateFields] = useState([]);
-  const [numPages, setNumPages] = useState(null);
   const [isLoading, setIsLoading] = useState(isEditMode);
   const [existingTemplate, setExistingTemplate] = useState(null);
 
@@ -107,7 +106,6 @@ export default function TemplateBuilder() {
             setUploadedPreview(template.documentData);
             setTemplateFields(template.fields || []);
             setParties(template.parties || []);
-            setNumPages(template.documentData?.numPages || 1);
 
             // Set visibility info
             if (template.visibility) {
@@ -150,7 +148,6 @@ export default function TemplateBuilder() {
             const loadingTask = pdfjs.getDocument(pdfData);
             const pdf = await loadingTask.promise;
             const totalPages = pdf.numPages;
-            setNumPages(totalPages);
 
             const page = await pdf.getPage(1);
 
@@ -273,14 +270,12 @@ export default function TemplateBuilder() {
       if (isEditMode && existingTemplate) {
         // Update existing template
         template = updateTemplate(existingTemplate.id, templatePayload);
-        console.log('Blueprint updated:', template);
         toast.success('Blueprint updated successfully!', {
           description: `"${templatePayload.name}" has been updated.`
         });
       } else {
         // Save new template
         template = saveTemplate(templatePayload);
-        console.log('Blueprint activated:', template);
         toast.success('Blueprint activated successfully!', {
           description: `"${template.name}" is now active and ready to use.`
         });
@@ -295,7 +290,6 @@ export default function TemplateBuilder() {
         }
       }, 1000);
     } catch (error) {
-      console.error('Error saving blueprint:', error);
       toast.error('Failed to save blueprint', {
         description: 'Please try again.'
       });
@@ -325,10 +319,8 @@ export default function TemplateBuilder() {
       let template;
       if (isEditMode && existingTemplate) {
         template = updateTemplate(existingTemplate.id, templatePayload);
-        console.log('Blueprint draft updated:', template);
       } else {
         template = saveTemplate(templatePayload);
-        console.log('Blueprint saved as draft:', template);
       }
 
       toast.success('Blueprint saved as draft!', {
@@ -355,10 +347,10 @@ export default function TemplateBuilder() {
     switch (currentStep) {
       case 0:
         return (
-          <div className="max-w-8xl mx-auto">
-            <div className={`grid grid-cols-1 gap-6 ${uploadedPreview ? 'lg:grid-cols-2' : ''}`}>
+          <div className="w-[90%] max-w-8xl mx-auto">
+            <div className={`grid grid-cols-1 gap-8 ${uploadedPreview ? 'lg:grid-cols-2' : ''}`}>
               {/* Left Column: Form */}
-              <div className={`space-y-6 mt-[2rem] ${!uploadedPreview ? 'max-w-4xl mx-auto' : ''}`}>
+              <div className={`space-y-6 ${!uploadedPreview ? 'max-w-2xl mx-auto w-full' : ''}`}>
                 {/* Basic Info Section */}
                 <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
                   <h3 className="font-semibold text-slate-900">Blueprint Information</h3>
@@ -440,13 +432,7 @@ export default function TemplateBuilder() {
               {uploadedPreview && (
                 <div className="lg:sticky lg:top-24 lg:h-fit">
                   <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                    {/* Page count header for PDFs */}
-                    {uploadedPreview.type === 'application/pdf' && uploadedPreview.numPages > 1 && (
-                      <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 text-sm text-slate-600 text-center">
-                        {uploadedPreview.numPages} pages
-                      </div>
-                    )}
-                    <div className="p-6 bg-slate-50 max-h-[70vh] overflow-y-auto">
+                    <div className="p-6 bg-slate-50 max-h-[85vh] overflow-y-auto">
                       {uploadedPreview.type === 'application/pdf' ? (
                         <Document
                           file={uploadedPreview.data}
@@ -498,6 +484,8 @@ export default function TemplateBuilder() {
               onFieldsChange={setTemplateFields}
               parties={parties}
               initialFields={templateFields}
+              onAddSigner={addParty}
+              onDeleteSigner={removeParty}
             />
           </div>
         );
@@ -608,8 +596,10 @@ export default function TemplateBuilder() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden">
-        {renderStepContent()}
+      <div className={`flex-1 ${currentStep === 0 ? 'overflow-auto' : 'overflow-hidden'}`}>
+        <div className={currentStep === 0 ? 'py-6' : 'h-full'}>
+          {renderStepContent()}
+        </div>
       </div>
     </div>
   );

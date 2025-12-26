@@ -5,8 +5,15 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 
 export default function ContractStatusChart({ data = [] }) {
+  const { t } = useTranslation();
+
+  const translateStatus = (status) => {
+    const key = status?.toLowerCase()?.replace(/\s+/g, '_');
+    return t(`common.${key}`, { defaultValue: status });
+  };
   return (
     <>
       <ResponsiveContainer width="100%" height={200}>
@@ -43,7 +50,7 @@ export default function ContractStatusChart({ data = [] }) {
               style={{ backgroundColor: item.color }}
             />
             <span className="text-xs text-slate-600 truncate">
-              {item.name} ({item.value.toLocaleString()})
+              {translateStatus(item.name)} ({item.value.toLocaleString()})
             </span>
           </div>
         ))}

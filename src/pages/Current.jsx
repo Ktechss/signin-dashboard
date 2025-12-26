@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { createPageUrl } from '@/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Eye, Download, Bell, MoreHorizontal, RefreshCw, CheckCircle2, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { FileText, Eye, Bell, MoreHorizontal, RefreshCw, CheckCircle2, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -42,18 +44,20 @@ const mockSigningRequests = [
   { id: 'SR-010', requestToken: 'TKN-7R4S-E0F0', userName: 'Dave Lee', email: 'dave@partner.com', contractId: 4, status: 'pending', lastActivity: '1 hour ago', attemptNumber: 2, createdDate: 'Jan 18, 2024' },
 ];
 
-const signingRequestStats = [
-  { title: 'Total Signing Requests', value: '1,234', subtitle: 'All verification attempts', icon: Clock, iconColor: 'text-indigo-600', iconBg: 'bg-indigo-50' },
-  { title: 'Authorised', value: '1,098', trend: 'up', trendValue: '+2.1%', icon: CheckCircle2, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
-  { title: 'Rejected', value: '68', trend: 'down', trendValue: '-12%', icon: XCircle, iconColor: 'text-red-600', iconBg: 'bg-red-50' },
-  { title: 'Pending', value: '156', subtitle: 'Awaiting verification', icon: AlertCircle, iconColor: 'text-amber-600', iconBg: 'bg-amber-50' },
-];
-
 export default function Current() {
+  const { t } = useTranslation();
+  const { isRTL } = useLanguage();
   const [activeTab, setActiveTab] = useState('contracts');
   const [contractFilters, setContractFilters] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRows, setSelectedRows] = useState([]);
+
+  const signingRequestStats = [
+    { title: t('signing.stats.totalSigningRequests'), value: '1,234', subtitle: t('signing.stats.allVerificationAttempts'), icon: Clock, iconColor: 'text-indigo-600', iconBg: 'bg-indigo-50' },
+    { title: t('signing.stats.authorised'), value: '1,098', trend: 'up', trendValue: '+2.1%', icon: CheckCircle2, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
+    { title: t('signing.stats.rejected'), value: '68', trend: 'down', trendValue: '-12%', icon: XCircle, iconColor: 'text-red-600', iconBg: 'bg-red-50' },
+    { title: t('signing.stats.pending'), value: '156', subtitle: t('signing.stats.awaitingVerification'), icon: AlertCircle, iconColor: 'text-amber-600', iconBg: 'bg-amber-50' },
+  ];
 
   const toggleRow = (id) => {
     setSelectedRows(prev =>
@@ -71,21 +75,21 @@ export default function Current() {
     <div className="min-h-screen bg-slate-50/50">
       <div className="p-6 lg:p-8 max-w-8xl mx-auto space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Signing</h1>
-          <p className="text-slate-500 mt-1">Manage your quick sign contracts and track signing requests.</p>
+        <div className={isRTL ? 'text-right' : ''}>
+          <h1 className="text-2xl font-bold text-slate-900">{t('signing.title')}</h1>
+          <p className="text-slate-500 mt-1">{t('signing.subtitle')}</p>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-slate-100">
-            <TabsTrigger value="contracts" className="gap-2">
+          <TabsList className={`bg-slate-100 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <TabsTrigger value="contracts" className={`gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
               <FileText className="w-4 h-4" />
-              Quick Sign
+              {t('signing.quickSign')}
             </TabsTrigger>
-            <TabsTrigger value="signingRequests" className="gap-2">
+            <TabsTrigger value="signingRequests" className={`gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
               <Clock className="w-4 h-4" />
-              Signing Requests
+              {t('signing.signingRequests')}
             </TabsTrigger>
           </TabsList>
 
@@ -234,10 +238,6 @@ export default function Current() {
                     Send Reminder
                   </Button>
                   <Button variant="outline" size="sm" className="gap-2 bg-white">
-                    <Download className="w-4 h-4" />
-                    Export
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-2 bg-white">
                     <CheckCircle2 className="w-4 h-4" />
                     Mark as Reviewed
                   </Button>
@@ -303,10 +303,6 @@ export default function Current() {
                               <DropdownMenuItem className="gap-2">
                                 <RefreshCw className="w-4 h-4" />
                                 Retry Verification
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="gap-2">
-                                <Download className="w-4 h-4" />
-                                Download Log
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="gap-2 text-red-600">

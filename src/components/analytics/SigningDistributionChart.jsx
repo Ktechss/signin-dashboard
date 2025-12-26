@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useTranslation } from 'react-i18next';
 
 // Status colors matching the design
 const STATUS_COLORS = {
@@ -26,7 +27,14 @@ const STATUS_COLORS = {
 };
 
 export default function SigningDistributionChart({ data = [] }) {
+  const { t } = useTranslation();
   const [selectedStatus, setSelectedStatus] = useState('');
+
+  // Helper to translate status names
+  const translateStatus = (status) => {
+    const key = status?.toLowerCase()?.replace(/\s+/g, '_');
+    return t(`common.${key}`, { defaultValue: status });
+  };
 
   // Apply consistent colors to data
   const coloredData = data.map(item => ({
@@ -47,7 +55,7 @@ export default function SigningDistributionChart({ data = [] }) {
     <>
       {/* Header with dropdown */}
       <div className="flex items-center justify-between mb-2">
-        <p className="text-sm text-slate-500">All statuses included</p>
+        <p className="text-sm text-slate-500">{t('common.all_statuses_included')}</p>
         {coloredData.length > 0 && (
           <Select value={selectedStatus} onValueChange={setSelectedStatus}>
             <SelectTrigger className="w-[140px] h-8 text-xs border-slate-200">
@@ -64,7 +72,7 @@ export default function SigningDistributionChart({ data = [] }) {
                 <SelectItem key={item.name} value={item.name}>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: item.color }} />
-                    <span>{item.name}</span>
+                    <span>{translateStatus(item.name)}</span>
                     <span className="text-slate-400">({item.value.toLocaleString()})</span>
                   </div>
                 </SelectItem>
@@ -110,7 +118,7 @@ export default function SigningDistributionChart({ data = [] }) {
               {selectedData?.value?.toLocaleString() || total.toLocaleString()}
             </div>
             <div className="text-xs text-slate-500 uppercase tracking-wide">
-              {selectedStatus || 'Total'}
+              {selectedStatus ? translateStatus(selectedStatus) : t('common.total')}
             </div>
           </div>
         </div>
@@ -121,7 +129,7 @@ export default function SigningDistributionChart({ data = [] }) {
         {coloredData.map((item) => (
           <div key={item.name} className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-            <span className="text-slate-600 uppercase tracking-wide">{item.name}:</span>
+            <span className="text-slate-600 uppercase tracking-wide">{translateStatus(item.name)}:</span>
             <span className="font-semibold text-slate-900">{item.value.toLocaleString()}</span>
           </div>
         ))}

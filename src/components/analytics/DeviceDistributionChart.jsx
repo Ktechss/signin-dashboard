@@ -5,8 +5,15 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 
 export default function DeviceDistributionChart({ data = [] }) {
+  const { t } = useTranslation();
+
+  const translateDevice = (device) => {
+    const key = device?.toLowerCase()?.replace(/\s+/g, '_');
+    return t(`common.${key}`, { defaultValue: device });
+  };
   return (
     <>
       <ResponsiveContainer width="100%" height={200}>
@@ -43,7 +50,7 @@ export default function DeviceDistributionChart({ data = [] }) {
               style={{ backgroundColor: item.color }}
             />
             <span className="text-xs text-slate-600">
-              {item.name} ({item.value}%)
+              {translateDevice(item.name)} ({item.value}%)
             </span>
           </div>
         ))}

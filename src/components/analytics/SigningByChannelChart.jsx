@@ -5,10 +5,17 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 
 const defaultColors = ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899'];
 
 export default function SigningByChannelChart({ data = [] }) {
+  const { t } = useTranslation();
+
+  const translateChannel = (channel) => {
+    const key = channel?.toLowerCase()?.replace(/\s+/g, '_');
+    return t(`common.${key}`, { defaultValue: channel });
+  };
   // Ensure each item has a color
   const chartData = data.map((item, index) => ({
     ...item,
@@ -51,7 +58,7 @@ export default function SigningByChannelChart({ data = [] }) {
               style={{ backgroundColor: item.color }}
             />
             <span className="text-xs text-slate-600 truncate">
-              {item.name} ({item.value}%)
+              {translateChannel(item.name)} ({item.value}%)
             </span>
           </div>
         ))}

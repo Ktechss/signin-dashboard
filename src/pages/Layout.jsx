@@ -1,28 +1,30 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import DynamicSidebar from '@/components/layout/DynamicSidebar';
 import TopBar from '@/components/layout/TopBar';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 
 const pageConfig = {
-  Dashboard: { title: 'Dashboard', subtitle: 'Overview of your signing activity' },
-  Contracts: { title: 'Contracts', subtitle: 'Manage and monitor contracts' },
-  ContractDetail: { title: 'Contract Details', subtitle: 'View contract information' },
-  SigningRequests: { title: 'Signing Requests', subtitle: 'Track individual signing requests' },
-  SigningRequestDetail: { title: 'Signing Request Details', subtitle: 'View signing request details' },
-  Templates: { title: 'Blueprints', subtitle: 'Manage document blueprints' },
-  TemplateDetail: { title: 'Blueprint Details', subtitle: 'View blueprint information' },
-  TemplateBuilder: { title: 'Blueprint Builder', subtitle: 'Create a new blueprint' },
-  SignContract: { title: 'Sign Contract', subtitle: 'Create a new signing request' },
-  GovernmentSearch: { title: 'Government Search', subtitle: 'Search government records' },
-  PlatformAnalytics: { title: 'Analytics', subtitle: 'Platform analytics overview' },
-  PlatformAuditLogs: { title: 'Audit Logs', subtitle: 'Platform audit logs' },
-  BlueprintGallery: { title: 'Blueprint Gallery', subtitle: 'Browse blueprint templates' },
-  UserManagement: { title: 'User Management', subtitle: 'Manage team members' },
-  APIKeys: { title: 'API Keys', subtitle: 'Manage API keys' },
-  AuditLogs: { title: 'Audit Logs', subtitle: 'View audit logs' },
-  Billing: { title: 'Billing', subtitle: 'Manage billing' },
-  Settings: { title: 'Settings', subtitle: 'Configure settings' },
+  Dashboard: { titleKey: 'pages.dashboard.title', subtitleKey: 'pages.dashboard.subtitle' },
+  Contracts: { titleKey: 'pages.contracts.title', subtitleKey: 'pages.contracts.subtitle' },
+  ContractDetail: { titleKey: 'pages.contractDetail.title', subtitleKey: 'pages.contractDetail.subtitle' },
+  SigningRequests: { titleKey: 'pages.signingRequests.title', subtitleKey: 'pages.signingRequests.subtitle' },
+  SigningRequestDetail: { titleKey: 'pages.signingRequestDetail.title', subtitleKey: 'pages.signingRequestDetail.subtitle' },
+  Templates: { titleKey: 'pages.templates.title', subtitleKey: 'pages.templates.subtitle' },
+  TemplateDetail: { titleKey: 'pages.templateDetail.title', subtitleKey: 'pages.templateDetail.subtitle' },
+  TemplateBuilder: { titleKey: 'pages.templateBuilder.title', subtitleKey: 'pages.templateBuilder.subtitle' },
+  SignContract: { titleKey: 'pages.signContract.title', subtitleKey: 'pages.signContract.subtitle' },
+  GovernmentSearch: { titleKey: 'pages.governmentSearch.title', subtitleKey: 'pages.governmentSearch.subtitle' },
+  PlatformAnalytics: { titleKey: 'pages.platformAnalytics.title', subtitleKey: 'pages.platformAnalytics.subtitle' },
+  PlatformAuditLogs: { titleKey: 'pages.platformAuditLogs.title', subtitleKey: 'pages.platformAuditLogs.subtitle' },
+  BlueprintGallery: { titleKey: 'pages.blueprintGallery.title', subtitleKey: 'pages.blueprintGallery.subtitle' },
+  UserManagement: { titleKey: 'pages.userManagement.title', subtitleKey: 'pages.userManagement.subtitle' },
+  APIKeys: { titleKey: 'pages.apiKeys.title', subtitleKey: 'pages.apiKeys.subtitle' },
+  AuditLogs: { titleKey: 'pages.auditLogs.title', subtitleKey: 'pages.auditLogs.subtitle' },
+  Billing: { titleKey: 'pages.billing.title', subtitleKey: 'pages.billing.subtitle' },
+  Settings: { titleKey: 'pages.settings.title', subtitleKey: 'pages.settings.subtitle' },
+  Current: { titleKey: 'signing.title', subtitleKey: 'signing.subtitle' },
 };
 
 export default function Layout({
@@ -34,8 +36,13 @@ export default function Layout({
   onClientSelect,
   onBackToPlatform,
 }) {
+  const { t } = useTranslation();
   const { isRTL } = useLanguage();
-  const config = pageConfig[currentPageName] || { title: currentPageName, subtitle: '' };
+  const configKeys = pageConfig[currentPageName] || { titleKey: currentPageName, subtitleKey: '' };
+  const config = {
+    title: t(configKeys.titleKey),
+    subtitle: t(configKeys.subtitleKey)
+  };
 
   // Full-width pages without sidebar layout
   const fullWidthPages = ['TemplateBuilder', 'SignContract'];
@@ -54,7 +61,9 @@ export default function Layout({
   }
 
   return (
-    <div className={cn("min-h-screen bg-slate-50 flex", isRTL && "flex-row-reverse")}>
+    <div
+      className="min-h-screen bg-slate-50 flex layout-container"
+    >
       <DynamicSidebar
         currentPage={currentPageName}
         isAdmin={isAdmin}

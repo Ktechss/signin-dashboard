@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Search,
   Calendar,
   Download,
-  RefreshCw,
   Filter,
   ChevronDown,
   CheckCircle2,
@@ -13,7 +12,6 @@ import {
   User,
   Building2,
   Clock,
-  Globe,
   FileText,
   LogIn,
   LogOut,
@@ -155,7 +153,7 @@ export default function PlatformAuditLogs() {
 
   // Fetch data from API
   const { data: clientsData, loading: clientsLoading } = useFetch(() => clientsApi.getAll(), []);
-  const { data: auditLogsData, loading: logsLoading, refetch: refetchLogs } = useFetch(
+  const { data: auditLogsData, loading: logsLoading } = useFetch(
     () => auditLogsApi.getPlatformLogs(),
     []
   );
@@ -183,7 +181,6 @@ export default function PlatformAuditLogs() {
     resource: log.resource,
     resourceId: log.resourceId || '-',
     description: log.resourceDetails || log.actionLabel,
-    ipAddress: log.ipAddress,
     userAgent: log.userAgent,
     status: log.status,
   }));
@@ -210,8 +207,7 @@ export default function PlatformAuditLogs() {
       return (
         log.user?.toLowerCase().includes(query) ||
         log.description?.toLowerCase().includes(query) ||
-        log.resourceId?.toLowerCase().includes(query) ||
-        log.ipAddress?.includes(query)
+        log.resourceId?.toLowerCase().includes(query)
       );
     }
     return true;
@@ -253,15 +249,6 @@ export default function PlatformAuditLogs() {
             <p className="text-slate-500 mt-1">
               Centralized audit trail across all clients and system activities.
             </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="icon" onClick={() => refetchLogs()}>
-              <RefreshCw className="w-4 h-4" />
-            </Button>
-            <Button variant="outline" className="gap-2">
-              <Download className="w-4 h-4" />
-              Export Logs
-            </Button>
           </div>
         </div>
 
@@ -320,7 +307,7 @@ export default function PlatformAuditLogs() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
-                placeholder="Search by user, description, resource ID, or IP..."
+                placeholder="Search by user, description, or resource ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -438,7 +425,6 @@ export default function PlatformAuditLogs() {
                 <TableHead>User</TableHead>
                 <TableHead>Action</TableHead>
                 <TableHead>Resource</TableHead>
-                <TableHead>IP Address</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
@@ -479,12 +465,6 @@ export default function PlatformAuditLogs() {
                     <div>
                       <p className="text-sm text-slate-700">{log.resource}</p>
                       <code className="text-xs text-slate-500 font-mono">{log.resourceId}</code>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      <Globe className="w-3.5 h-3.5 text-slate-400" />
-                      <code className="text-xs text-slate-600 font-mono">{log.ipAddress}</code>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -566,10 +546,6 @@ export default function PlatformAuditLogs() {
                     <p className="text-xs text-slate-500 mb-1">Resource</p>
                     <p className="text-sm font-medium text-slate-900">{selectedLog.resource}</p>
                     <code className="text-xs text-slate-500 font-mono">{selectedLog.resourceId}</code>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">IP Address</p>
-                    <code className="text-sm font-mono text-slate-700">{selectedLog.ipAddress}</code>
                   </div>
                   <div>
                     <p className="text-xs text-slate-500 mb-1">User Agent</p>

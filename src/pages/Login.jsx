@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { motion } from 'framer-motion';
 import {
   Eye,
@@ -11,6 +13,7 @@ import {
   FileCheck,
   AlertCircle,
   Shield,
+  Globe,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +21,8 @@ import { Label } from '@/components/ui/label';
 import { login, initializeRootUser } from '@/utils/userStorage';
 
 export default function Login({ onLogin }) {
+  const { t } = useTranslation();
+  const { language, toggleLanguage, isRTL } = useLanguage();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -206,10 +211,23 @@ export default function Login({ onLogin }) {
             <span className="text-2xl font-bold text-slate-800 tracking-tight">SignFlow</span>
           </div>
 
+          {/* Language Toggle */}
+          <div className={`absolute top-4 ${isRTL ? 'left-4' : 'right-4'}`}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleLanguage}
+              className="gap-2"
+            >
+              <Globe className="w-4 h-4" />
+              {language === 'en' ? 'العربية' : 'English'}
+            </Button>
+          </div>
+
           {/* Header */}
-          <div className="mb-10">
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome back</h1>
-            <p className="text-slate-500">Sign in to access your dashboard</p>
+          <div className={`mb-10 ${isRTL ? 'text-right' : ''}`}>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">{t('login.title')}</h1>
+            <p className="text-slate-500">{t('login.subtitle')}</p>
           </div>
 
           {/* Form */}
@@ -227,9 +245,9 @@ export default function Login({ onLogin }) {
             )}
 
             {/* Email Field */}
-            <div className="space-y-2">
+            <div className={`space-y-2 ${isRTL ? 'text-right' : ''}`}>
               <Label htmlFor="email" className="text-sm font-medium text-slate-700">
-                Email Address
+                {t('login.email')}
               </Label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -246,9 +264,9 @@ export default function Login({ onLogin }) {
             </div>
 
             {/* Password Field */}
-            <div className="space-y-2">
+            <div className={`space-y-2 ${isRTL ? 'text-right' : ''}`}>
               <Label htmlFor="password" className="text-sm font-medium text-slate-700">
-                Password
+                {t('login.password')}
               </Label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -288,14 +306,14 @@ export default function Login({ onLogin }) {
                   className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                 />
               ) : (
-                'Sign in to Dashboard'
+                t('login.signIn')
               )}
             </Button>
           </form>
 
           {/* Demo Credentials */}
           <div className="mt-8 pt-6 border-t border-slate-200">
-            <p className="text-xs text-slate-500 text-center mb-3">Platform Admin (Click to fill)</p>
+            <p className={`text-xs text-slate-500 mb-3 ${isRTL ? 'text-right' : 'text-center'}`}>{t('login.demoCredentials')}</p>
             <div className="space-y-3">
               <button
                 type="button"

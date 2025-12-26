@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Key,
   Save,
@@ -65,15 +67,17 @@ import {
 
 // Settings navigation items
 const settingsNavItems = [
-  { id: 'profile', label: 'Profile', icon: User },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'security', label: 'Security', icon: Shield },
-  { id: 'company', label: 'Company', icon: Building },
-  { id: 'channels', label: 'Channels', icon: Layers },
-  { id: 'onboarding', label: 'Onboarding', icon: UserPlus },
+  { id: 'profile', labelKey: 'settings.profile', icon: User },
+  { id: 'notifications', labelKey: 'settings.notifications', icon: Bell },
+  { id: 'security', labelKey: 'settings.security', icon: Shield },
+  { id: 'company', labelKey: 'settings.company', icon: Building },
+  { id: 'channels', labelKey: 'settings.channels', icon: Layers },
+  { id: 'onboarding', labelKey: 'settings.onboarding', icon: UserPlus },
 ];
 
 export default function Settings() {
+  const { t } = useTranslation();
+  const { isRTL } = useLanguage();
   const [activeTab, setActiveTab] = useState('profile');
 
   // Channels state
@@ -151,11 +155,11 @@ export default function Settings() {
       <div className="p-6 lg:p-8 max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-          <p className="text-slate-500 mt-0.5">Manage your account and preferences</p>
+          <h1 className={`text-2xl font-bold text-slate-900 ${isRTL ? 'text-right' : 'text-left'}`}>{t('settings.title')}</h1>
+          <p className={`text-slate-500 mt-0.5 ${isRTL ? 'text-right' : 'text-left'}`}>{t('settings.subtitle')}</p>
         </div>
 
-        <div className="flex gap-8">
+        <div className={`flex gap-8 ${isRTL ? 'flex-row-reverse' : ''}`}>
           {/* Settings Navigation */}
           <div className="w-56 flex-shrink-0">
             <nav className="space-y-1">
@@ -165,13 +169,14 @@ export default function Settings() {
                   onClick={() => setActiveTab(item.id)}
                   className={cn(
                     "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                    isRTL ? "flex-row-reverse" : "",
                     activeTab === item.id
                       ? "bg-slate-900 text-white"
                       : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   )}
                 >
                   <item.icon className="w-4 h-4" />
-                  {item.label}
+                  {t(item.labelKey)}
                 </button>
               ))}
             </nav>
@@ -181,50 +186,50 @@ export default function Settings() {
           <div className="flex-1 min-w-0">
             {activeTab === 'profile' && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Profile Information</h2>
-                  <p className="text-sm text-slate-500">Update your personal details and contact information.</p>
+                <div className={isRTL ? 'text-right' : ''}>
+                  <h2 className="text-lg font-semibold text-slate-900">{t('settings.profileInfo.title')}</h2>
+                  <p className="text-sm text-slate-500">{t('settings.profileInfo.subtitle')}</p>
                 </div>
-                
+
                 <Separator />
-                
-                <div className="flex items-center gap-6">
+
+                <div className={`flex items-center gap-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-2xl font-semibold">
                     JD
                   </div>
-                  <div>
-                    <Button variant="outline" size="sm">Change Photo</Button>
-                    <p className="text-xs text-slate-500 mt-2">JPG, PNG or GIF. Max 2MB.</p>
+                  <div className={isRTL ? 'text-right' : ''}>
+                    <Button variant="outline" size="sm">{t('settings.profileInfo.changePhoto')}</Button>
+                    <p className="text-xs text-slate-500 mt-2">{t('settings.profileInfo.photoHint')}</p>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" defaultValue="John" />
+                  <div className={`space-y-2 ${isRTL ? 'text-right' : ''}`}>
+                    <Label htmlFor="firstName">{t('settings.profileInfo.firstName')}</Label>
+                    <Input id="firstName" defaultValue="John" className={isRTL ? 'text-right' : ''} />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" defaultValue="Doe" />
+                  <div className={`space-y-2 ${isRTL ? 'text-right' : ''}`}>
+                    <Label htmlFor="lastName">{t('settings.profileInfo.lastName')}</Label>
+                    <Input id="lastName" defaultValue="Doe" className={isRTL ? 'text-right' : ''} />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" defaultValue="john.doe@company.com" />
+                  <div className={`space-y-2 ${isRTL ? 'text-right' : ''}`}>
+                    <Label htmlFor="email">{t('settings.profileInfo.email')}</Label>
+                    <Input id="email" type="email" defaultValue="john.doe@company.com" className={isRTL ? 'text-right' : ''} />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" type="tel" defaultValue="+1 234 567 8900" />
+                  <div className={`space-y-2 ${isRTL ? 'text-right' : ''}`}>
+                    <Label htmlFor="phone">{t('settings.profileInfo.phone')}</Label>
+                    <Input id="phone" type="tel" defaultValue="+1 234 567 8900" className={isRTL ? 'text-right' : ''} />
                   </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="bio">Bio</Label>
-                    <Textarea id="bio" placeholder="Tell us about yourself..." rows={3} />
+                  <div className={`space-y-2 md:col-span-2 ${isRTL ? 'text-right' : ''}`}>
+                    <Label htmlFor="bio">{t('settings.profileInfo.bio')}</Label>
+                    <Textarea id="bio" placeholder={t('settings.profileInfo.bioPlaceholder')} rows={3} className={isRTL ? 'text-right' : ''} />
                   </div>
                 </div>
-                
-                <div className="flex justify-end">
+
+                <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'}`}>
                   <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
                     <Save className="w-4 h-4" />
-                    Save Changes
+                    {t('settings.profileInfo.saveChanges')}
                   </Button>
                 </div>
               </div>
@@ -232,47 +237,47 @@ export default function Settings() {
             
             {activeTab === 'notifications' && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Notification Preferences</h2>
-                  <p className="text-sm text-slate-500">Choose what notifications you receive and how.</p>
+                <div className={isRTL ? 'text-right' : ''}>
+                  <h2 className="text-lg font-semibold text-slate-900">{t('settings.notificationsSettings.title')}</h2>
+                  <p className="text-sm text-slate-500">{t('settings.notificationsSettings.subtitle')}</p>
                 </div>
-                
+
                 <Separator />
-                
+
                 <div className="space-y-6">
                   <div>
-                    <h3 className="font-medium text-slate-900 mb-4">Email Notifications</h3>
+                    <h3 className={`font-medium text-slate-900 mb-4 ${isRTL ? 'text-right' : ''}`}>{t('settings.notificationsSettings.emailNotifications')}</h3>
                     <div className="space-y-4">
                       {[
-                        { id: 'email_signatures', label: 'Signature Completed', description: 'When someone signs a document' },
-                        { id: 'email_expiring', label: 'Contracts Expiring', description: 'Reminder before contracts expire' },
-                        { id: 'email_failed', label: 'Verification Failed', description: 'When identity verification fails' },
-                        { id: 'email_reminders', label: 'Pending Reminders', description: 'Daily digest of pending signatures' },
+                        { id: 'email_signatures', labelKey: 'settings.notificationsSettings.signatureCompleted', descKey: 'settings.notificationsSettings.signatureCompletedDesc' },
+                        { id: 'email_expiring', labelKey: 'settings.notificationsSettings.contractsExpiring', descKey: 'settings.notificationsSettings.contractsExpiringDesc' },
+                        { id: 'email_failed', labelKey: 'settings.notificationsSettings.verificationFailed', descKey: 'settings.notificationsSettings.verificationFailedDesc' },
+                        { id: 'email_reminders', labelKey: 'settings.notificationsSettings.pendingReminders', descKey: 'settings.notificationsSettings.pendingRemindersDesc' },
                       ].map(item => (
-                        <div key={item.id} className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-slate-700">{item.label}</p>
-                            <p className="text-sm text-slate-500">{item.description}</p>
+                        <div key={item.id} className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                          <div className={isRTL ? 'text-right' : ''}>
+                            <p className="font-medium text-slate-700">{t(item.labelKey)}</p>
+                            <p className="text-sm text-slate-500">{t(item.descKey)}</p>
                           </div>
                           <Switch defaultChecked />
                         </div>
                       ))}
                     </div>
                   </div>
-                  
+
                   <Separator />
-                  
+
                   <div>
-                    <h3 className="font-medium text-slate-900 mb-4">Push Notifications</h3>
+                    <h3 className={`font-medium text-slate-900 mb-4 ${isRTL ? 'text-right' : ''}`}>{t('settings.notificationsSettings.pushNotifications')}</h3>
                     <div className="space-y-4">
                       {[
-                        { id: 'push_signatures', label: 'Real-time Signatures', description: 'Instant notification when signed' },
-                        { id: 'push_urgent', label: 'Urgent Alerts', description: 'Critical issues requiring attention' },
+                        { id: 'push_signatures', labelKey: 'settings.notificationsSettings.realTimeSignatures', descKey: 'settings.notificationsSettings.realTimeSignaturesDesc' },
+                        { id: 'push_urgent', labelKey: 'settings.notificationsSettings.urgentAlerts', descKey: 'settings.notificationsSettings.urgentAlertsDesc' },
                       ].map(item => (
-                        <div key={item.id} className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-slate-700">{item.label}</p>
-                            <p className="text-sm text-slate-500">{item.description}</p>
+                        <div key={item.id} className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                          <div className={isRTL ? 'text-right' : ''}>
+                            <p className="font-medium text-slate-700">{t(item.labelKey)}</p>
+                            <p className="text-sm text-slate-500">{t(item.descKey)}</p>
                           </div>
                           <Switch defaultChecked={item.id === 'push_urgent'} />
                         </div>
@@ -280,11 +285,11 @@ export default function Settings() {
                     </div>
                   </div>
                 </div>
-                
-                <div className="flex justify-end">
+
+                <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'}`}>
                   <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
                     <Save className="w-4 h-4" />
-                    Save Preferences
+                    {t('settings.notificationsSettings.savePreferences')}
                   </Button>
                 </div>
               </div>

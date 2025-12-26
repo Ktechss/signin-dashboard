@@ -9,17 +9,29 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { useTranslation } from 'react-i18next';
 
-const presets = [
-  { label: 'Today', getValue: () => ({ from: new Date(), to: new Date() }) },
-  { label: 'Last 7 days', getValue: () => ({ from: subDays(new Date(), 6), to: new Date() }) },
-  { label: 'Last 30 days', getValue: () => ({ from: subDays(new Date(), 29), to: new Date() }) },
-];
-
-export default function DateFilter({ value, onChange, placeholder = 'Select date', className }) {
+export default function DateFilter({ value, onChange, placeholder, className }) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [showRange, setShowRange] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState(null);
+
+  const todayLabel = t('common.today');
+  const last7Label = t('common.last_7_days');
+  const last30Label = t('common.last_30_days');
+  const rangeLabel = t('common.range');
+  const fromLabel = t('common.from');
+  const toLabel = t('common.to');
+  const selectDateLabel = placeholder || t('common.select_date');
+  const quickSelectLabel = t('common.quick_select');
+  const selectRangeLabel = t('common.select_range');
+
+  const translatedPresets = [
+    { label: todayLabel, getValue: () => ({ from: new Date(), to: new Date() }) },
+    { label: last7Label, getValue: () => ({ from: subDays(new Date(), 6), to: new Date() }) },
+    { label: last30Label, getValue: () => ({ from: subDays(new Date(), 29), to: new Date() }) },
+  ];
 
   const handlePresetClick = (preset) => {
     const range = preset.getValue();
@@ -51,7 +63,7 @@ export default function DateFilter({ value, onChange, placeholder = 'Select date
   };
 
   const formatDateDisplay = () => {
-    if (!value?.from) return placeholder;
+    if (!value?.from) return selectDateLabel;
 
     const fromDate = new Date(value.from);
     const toDate = value.to ? new Date(value.to) : fromDate;
@@ -95,7 +107,7 @@ export default function DateFilter({ value, onChange, placeholder = 'Select date
           // Range Selection Mode - Options at top, dual calendars below
           <div>
             <div className="p-2 border-b border-slate-100 flex gap-1">
-              {presets.map((preset) => (
+              {translatedPresets.map((preset) => (
                 <button
                   key={preset.label}
                   onClick={() => handlePresetClick(preset)}
@@ -105,15 +117,15 @@ export default function DateFilter({ value, onChange, placeholder = 'Select date
                 </button>
               ))}
               <button className="px-2.5 py-1 text-xs rounded-md bg-slate-900 text-white">
-                Range
+                {rangeLabel}
               </button>
             </div>
             <div className="flex">
               <div className="border-r border-slate-100">
                 <div className="px-3 py-2 border-b border-slate-100">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">From</p>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">{fromLabel}</p>
                   <p className="text-sm font-medium text-slate-900">
-                    {value?.from ? format(new Date(value.from), 'MMM d, yyyy') : 'Select date'}
+                    {value?.from ? format(new Date(value.from), 'MMM d, yyyy') : selectDateLabel}
                   </p>
                 </div>
                 <Calendar
@@ -126,9 +138,9 @@ export default function DateFilter({ value, onChange, placeholder = 'Select date
               </div>
               <div>
                 <div className="px-3 py-2 border-b border-slate-100">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">To</p>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">{toLabel}</p>
                   <p className="text-sm font-medium text-slate-900">
-                    {value?.to ? format(new Date(value.to), 'MMM d, yyyy') : 'Select date'}
+                    {value?.to ? format(new Date(value.to), 'MMM d, yyyy') : selectDateLabel}
                   </p>
                 </div>
                 <Calendar
@@ -163,9 +175,9 @@ export default function DateFilter({ value, onChange, placeholder = 'Select date
             </div>
             {/* Options (right) */}
             <div className="p-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium px-2 mb-1.5">Quick Select</p>
+              <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium px-2 mb-1.5">{quickSelectLabel}</p>
               <div className="space-y-0.5">
-                {presets.map((preset) => (
+                {translatedPresets.map((preset) => (
                   <button
                     key={preset.label}
                     onClick={() => handlePresetClick(preset)}
@@ -184,7 +196,7 @@ export default function DateFilter({ value, onChange, placeholder = 'Select date
                   onClick={handleSelectRange}
                   className="w-full text-left px-2 py-1.5 text-xs rounded-md hover:bg-slate-100 text-slate-700 transition-colors"
                 >
-                  Select Range
+                  {selectRangeLabel}
                 </button>
               </div>
             </div>
