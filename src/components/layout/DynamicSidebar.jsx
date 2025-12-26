@@ -146,11 +146,11 @@ export default function DynamicSidebar({
       }}
     >
       {/* Logo */}
-      <div className={cn("p-4 flex items-center gap-3 border-b", themeStyles.border)}>
+      <div className={cn("p-4 flex items-center gap-3 border-b", themeStyles.border)} style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", isDarkMode ? "bg-white" : "bg-[#1a1f2e]")}>
           <PenTool className={cn("w-4 h-4", isDarkMode ? "text-[#1a1f2e]" : "text-white")} />
         </div>
-        <span className="font-semibold text-sm flex-1">Face Sign</span>
+        <span className={cn("font-semibold text-sm flex-1", isRTL && "text-right")}>Face Sign</span>
         {/* Language Toggle Button */}
         <button
           onClick={toggleLanguage}
@@ -174,6 +174,7 @@ export default function DynamicSidebar({
             "mx-4 mt-4 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
             themeStyles.navInactive
           )}
+          style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
         >
           <ArrowLeft className={cn("w-4 h-4", isRTL && "rotate-180")} />
           <span>{t('sidebar.backToPlatform')}</span>
@@ -183,11 +184,11 @@ export default function DynamicSidebar({
       {/* Current Client Context (Only for Super Admin who selected a client) */}
       {isSuperAdmin && selectedClient && (
         <div className={cn("mx-4 mt-3 mb-2 p-3 rounded-lg border", themeStyles.clientBg)}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-medium text-white flex-shrink-0">
               {selectedClient.abbr}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className={cn("flex-1 min-w-0", isRTL && "text-right")}>
               <p className={cn("text-xs", themeStyles.clientLabel)}>{t('sidebar.client')}</p>
               <p className="text-sm font-medium truncate">{selectedClient.name}</p>
             </div>
@@ -196,7 +197,7 @@ export default function DynamicSidebar({
       )}
 
       {/* Section Header */}
-      <div className="px-4 pt-4 pb-2">
+      <div className={cn("px-4 pt-4 pb-2", isRTL && "text-right")}>
         <span className={cn("text-xs uppercase tracking-wider", themeStyles.sectionText)}>
           {isClientMode ? (isSuperAdmin ? t('sidebar.clientMenu') : t('sidebar.navigation')) : t('sidebar.platform')}
         </span>
@@ -214,6 +215,7 @@ export default function DynamicSidebar({
                 "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors mb-0.5",
                 currentPage === item.href ? themeStyles.navActive : themeStyles.navInactive
               )}
+              style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
             >
               <item.icon className="w-4 h-4 flex-shrink-0" />
               <span className={cn("flex-1", isRTL ? "text-right" : "text-left")}>{t(item.labelKey)}</span>
@@ -231,6 +233,7 @@ export default function DynamicSidebar({
                       "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors mb-0.5",
                       themeStyles.navInactive
                     )}
+                    style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
                   >
                     <item.icon className="w-4 h-4 flex-shrink-0" />
                     <span className={cn("flex-1", isRTL ? "text-right" : "text-left")}>{t(item.labelKey)}</span>
@@ -246,6 +249,7 @@ export default function DynamicSidebar({
                       "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors mb-0.5",
                       currentPage === item.href ? themeStyles.navActive : themeStyles.navInactive
                     )}
+                    style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
                   >
                     <item.icon className="w-4 h-4 flex-shrink-0" />
                     <span className={cn("flex-1", isRTL ? "text-right" : "text-left")}>{t(item.labelKey)}</span>
@@ -274,7 +278,7 @@ export default function DynamicSidebar({
 
             {/* Clients Section */}
             <div className="mt-6 mb-2">
-              <div className="flex items-center justify-between px-3 mb-2">
+              <div className="flex items-center justify-between px-3 mb-2" style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                 <span className={cn("text-xs uppercase tracking-wider", themeStyles.sectionText)}>{t('sidebar.clients')}</span>
                 <button className={cn(
                   "w-5 h-5 rounded border flex items-center justify-center transition-colors",
@@ -292,6 +296,7 @@ export default function DynamicSidebar({
                     "w-full flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-all group mb-0.5",
                     themeStyles.navInactive
                   )}
+                  style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
                 >
                   <div className={cn(
                     "w-7 h-7 rounded-lg flex items-center justify-center text-xs font-medium group-hover:bg-gradient-to-br group-hover:from-blue-500 group-hover:to-purple-600 group-hover:text-white transition-all",
@@ -310,7 +315,7 @@ export default function DynamicSidebar({
 
       {/* User Profile with Theme Toggle */}
       <div className={cn("p-3 border-t", themeStyles.border)}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
           {/* Theme Toggle Button */}
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
@@ -330,14 +335,17 @@ export default function DynamicSidebar({
           </button>
 
           {/* User Profile */}
-          <div className={cn(
-            "flex-1 flex items-center gap-3 px-2 py-2 rounded-lg transition-colors cursor-pointer",
-            isDarkMode ? "hover:bg-white/5" : "hover:bg-gray-100"
-          )}>
+          <div
+            className={cn(
+              "flex-1 flex items-center gap-3 px-2 py-2 rounded-lg transition-colors cursor-pointer",
+              isDarkMode ? "hover:bg-white/5" : "hover:bg-gray-100"
+            )}
+            style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
+          >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-xs font-medium text-white">
               {userInitials}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className={cn("flex-1 min-w-0", isRTL && "text-right")}>
               <p className="text-sm font-medium truncate">{userName}</p>
               <p className={cn("text-xs truncate", themeStyles.email)}>{userEmail}</p>
             </div>
@@ -354,7 +362,7 @@ export default function DynamicSidebar({
             )}
             title={t('sidebar.logout')}
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className={cn("w-4 h-4", isRTL && "rotate-180")} />
           </button>
         </div>
       </div>

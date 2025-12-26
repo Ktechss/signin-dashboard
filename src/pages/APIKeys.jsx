@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Plus,
   Copy,
@@ -118,13 +118,6 @@ export default function APIKeys() {
       setSelectedChannels([]);
       loadApiKeys();
     }
-  };
-
-  const getChannelNames = (channelIds) => {
-    if (!channelIds || channelIds.length === 0) return 'None';
-    return channelIds
-      .map(id => channels.find(c => c.id === id)?.name || 'Unknown')
-      .join(', ');
   };
 
   const handleCopyKey = async (key) => {

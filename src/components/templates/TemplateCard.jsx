@@ -1,10 +1,11 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { 
-  MoreHorizontal, 
-  Copy, 
-  Edit, 
-  Archive, 
+import { useTranslation } from 'react-i18next';
+import {
+  MoreHorizontal,
+  Copy,
+  Edit,
+  Archive,
   Eye,
   FileText,
   Users,
@@ -21,6 +22,7 @@ import {
 import StatusBadge from '@/components/ui-custom/StatusBadge';
 
 export default function TemplateCard({ template, onClick, className }) {
+  const { t } = useTranslation();
   const {
     id,
     name,
@@ -68,7 +70,7 @@ export default function TemplateCard({ template, onClick, className }) {
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
           <Button size="sm" className="gap-2 bg-white text-slate-900 hover:bg-slate-100" onClick={(e) => e.stopPropagation()}>
             <Eye className="w-4 h-4" />
-            Preview
+            {t('templates.preview', 'Preview')}
           </Button>
         </div>
       </div>
@@ -91,7 +93,7 @@ export default function TemplateCard({ template, onClick, className }) {
             </span>
             <span className="flex items-center gap-1">
               <Users className="w-3.5 h-3.5" />
-              {usageCount} uses
+              {usageCount} {t('templates.uses', 'uses')}
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -115,11 +117,11 @@ export default function TemplateCard({ template, onClick, className }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>Create Contract</DropdownMenuItem>
-              <DropdownMenuItem>Version History</DropdownMenuItem>
-              <DropdownMenuItem>Duplicate</DropdownMenuItem>
+              <DropdownMenuItem>{t('templates.createContract', 'Create Contract')}</DropdownMenuItem>
+              <DropdownMenuItem>{t('templates.versionHistory', 'Version History')}</DropdownMenuItem>
+              <DropdownMenuItem>{t('templates.duplicate', 'Duplicate')}</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-amber-600">Archive</DropdownMenuItem>
+              <DropdownMenuItem className="text-amber-600">{t('templates.archive', 'Archive')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

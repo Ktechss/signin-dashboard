@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import StatusBadge from '@/components/ui-custom/StatusBadge';
 import DocumentViewer from '@/components/ui-custom/DocumentViewer';
+import { FieldOverlayList } from '@/components/templates/FieldOverlay';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -212,45 +213,7 @@ export default function TemplateDetail() {
                                   className="rounded-lg shadow-sm"
                                 />
                                 {/* Render field overlays for this page */}
-                                {pageFields.map((field) => {
-                                  const fieldTypes = {
-                                    signature: { icon: '✍️', color: 'indigo' },
-                                    initials: { icon: '📝', color: 'purple' },
-                                    date: { icon: '📅', color: 'emerald' },
-                                    text: { icon: '📄', color: 'blue' },
-                                    checkbox: { icon: '☑️', color: 'amber' },
-                                    number: { icon: '#️⃣', color: 'rose' },
-                                  };
-
-                                  const fieldInfo = fieldTypes[field.type] || fieldTypes.text;
-                                  // Use colors based on field's role/party assignment
-                                  const colors = [
-                                    { border: 'border-indigo-400', bg: 'bg-indigo-100/70', text: 'text-indigo-700' },
-                                    { border: 'border-emerald-400', bg: 'bg-emerald-100/70', text: 'text-emerald-700' },
-                                    { border: 'border-purple-400', bg: 'bg-purple-100/70', text: 'text-purple-700' },
-                                    { border: 'border-amber-400', bg: 'bg-amber-100/70', text: 'text-amber-700' },
-                                  ];
-                                  // Get color based on field's assigned role (party)
-                                  const roleIndex = field.role ? parseInt(field.role) - 1 : 0;
-                                  const colorScheme = colors[roleIndex % colors.length];
-
-                                  return (
-                                    <div
-                                      key={field.id}
-                                      className={`absolute border-2 border-dashed ${colorScheme.border} ${colorScheme.bg} rounded flex items-center justify-center`}
-                                      style={{
-                                        left: `${(field.x / 595) * 100}%`,
-                                        top: `${(field.y / 842) * 100}%`,
-                                        width: `${(field.width / 595) * 100}%`,
-                                        height: `${(field.height / 842) * 100}%`,
-                                      }}
-                                    >
-                                      <span className={`text-xs font-medium ${colorScheme.text}`}>
-                                        {fieldInfo.icon} {field.type.charAt(0).toUpperCase() + field.type.slice(1)}
-                                      </span>
-                                    </div>
-                                  );
-                                })}
+                                <FieldOverlayList fields={pageFields} />
                               </div>
                             );
                           })}
@@ -268,43 +231,7 @@ export default function TemplateDetail() {
                           }}
                         />
                         {/* Render field overlays for images (all on page 1) */}
-                        {template.fields && Array.isArray(template.fields) && template.fields.map((field) => {
-                          const fieldTypes = {
-                            signature: { icon: '✍️', color: 'indigo' },
-                            initials: { icon: '📝', color: 'purple' },
-                            date: { icon: '📅', color: 'emerald' },
-                            text: { icon: '📄', color: 'blue' },
-                            checkbox: { icon: '☑️', color: 'amber' },
-                            number: { icon: '#️⃣', color: 'rose' },
-                          };
-
-                          const fieldInfo = fieldTypes[field.type] || fieldTypes.text;
-                          const colors = [
-                            { border: 'border-indigo-400', bg: 'bg-indigo-100/70', text: 'text-indigo-700' },
-                            { border: 'border-emerald-400', bg: 'bg-emerald-100/70', text: 'text-emerald-700' },
-                            { border: 'border-purple-400', bg: 'bg-purple-100/70', text: 'text-purple-700' },
-                            { border: 'border-amber-400', bg: 'bg-amber-100/70', text: 'text-amber-700' },
-                          ];
-                          const roleIndex = field.role ? parseInt(field.role) - 1 : 0;
-                          const colorScheme = colors[roleIndex % colors.length];
-
-                          return (
-                            <div
-                              key={field.id}
-                              className={`absolute border-2 border-dashed ${colorScheme.border} ${colorScheme.bg} rounded flex items-center justify-center`}
-                              style={{
-                                left: `${(field.x / 595) * 100}%`,
-                                top: `${(field.y / 842) * 100}%`,
-                                width: `${(field.width / 595) * 100}%`,
-                                height: `${(field.height / 842) * 100}%`,
-                              }}
-                            >
-                              <span className={`text-xs font-medium ${colorScheme.text}`}>
-                                {fieldInfo.icon} {field.type.charAt(0).toUpperCase() + field.type.slice(1)}
-                              </span>
-                            </div>
-                          );
-                        })}
+                        <FieldOverlayList fields={template.fields} />
                       </div>
                     )}
                   </div>
@@ -344,43 +271,76 @@ export default function TemplateDetail() {
             {/* Party Roles */}
             {template.parties && Array.isArray(template.parties) && template.parties.length > 0 && (
               <div className="bg-white rounded-xl border border-slate-200/60 p-5">
-                <h3 className="font-semibold text-slate-900 mb-4">Party Roles</h3>
+                <h3 className="font-semibold text-slate-900 mb-4">Signers & Fields</h3>
                 <div className="space-y-3">
                   {template.parties.map((party, index) => {
                     // Color scheme matching signature overlay colors - only left border colored
                     const partyColors = [
-                      { border: 'border-l-indigo-500' },
-                      { border: 'border-l-emerald-500' },
-                      { border: 'border-l-purple-500' },
-                      { border: 'border-l-amber-500' },
+                      { border: 'border-l-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-600' },
+                      { border: 'border-l-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-600' },
+                      { border: 'border-l-purple-500', bg: 'bg-purple-50', text: 'text-purple-600' },
+                      { border: 'border-l-amber-500', bg: 'bg-amber-50', text: 'text-amber-600' },
                     ];
                     // Use saved color index or default based on position
                     const colorIndex = party.colorIndex !== undefined ? party.colorIndex : index;
                     const colorScheme = partyColors[colorIndex % partyColors.length];
 
-                    // Get signatures allocated to this signer with page info
+                    // Get all fields allocated to this signer
                     const signerFields = template.fields ? template.fields.filter(
                       field => field.role === party.id.toString() || field.role === (index + 1).toString()
                     ) : [];
-                    const signatureCount = signerFields.length;
+                    const totalFieldCount = signerFields.length;
 
-                    // Get unique pages where this signer has signatures
-                    const signaturePages = [...new Set(signerFields.map(f => f.page || 1))].sort((a, b) => a - b);
+                    // Group fields by type and count them
+                    const fieldsByType = signerFields.reduce((acc, field) => {
+                      const type = field.type || 'signature';
+                      acc[type] = (acc[type] || 0) + 1;
+                      return acc;
+                    }, {});
+
+                    // Get unique pages where this signer has fields
+                    const fieldPages = [...new Set(signerFields.map(f => f.page || 1))].sort((a, b) => a - b);
+
+                    // Field type labels
+                    const fieldTypeLabels = {
+                      signature: 'Signature',
+                      text: 'Text',
+                      initials: 'Initials',
+                      date: 'Date',
+                      checkbox: 'Checkbox',
+                      number: 'Number'
+                    };
 
                     return (
                       <div
                         key={index}
                         className={`p-3 bg-slate-50 rounded-r-lg border-l-4 ${colorScheme.border}`}
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-slate-700">{party.name || party.role}</span>
                           <Badge variant="outline" className="text-slate-600 text-xs">
-                            {signatureCount} {signatureCount === 1 ? 'signature' : 'signatures'}
+                            {totalFieldCount} {totalFieldCount === 1 ? 'field' : 'fields'}
                           </Badge>
                         </div>
-                        {signaturePages.length > 0 && (numPages || template.documentData?.numPages) > 1 && (
-                          <div className="mt-1.5 text-xs text-slate-500">
-                            Page{signaturePages.length > 1 ? 's' : ''}: {signaturePages.join(', ')}
+
+                        {/* Field type breakdown */}
+                        {Object.keys(fieldsByType).length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {Object.entries(fieldsByType).map(([type, count]) => (
+                              <span
+                                key={type}
+                                className={`text-xs px-2 py-0.5 rounded-full ${colorScheme.bg} ${colorScheme.text}`}
+                              >
+                                {count} {fieldTypeLabels[type] || type}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Pages info */}
+                        {fieldPages.length > 0 && (numPages || template.documentData?.numPages) > 1 && (
+                          <div className="text-xs text-slate-500">
+                            Page{fieldPages.length > 1 ? 's' : ''}: {fieldPages.join(', ')}
                           </div>
                         )}
                       </div>

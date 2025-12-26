@@ -8,8 +8,13 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 
 export default function ClientSigningTrendChart({ data = [] }) {
+  const { t } = useTranslation();
+  const completedLabel = t('common.completed');
+  const rejectedLabel = t('common.rejected');
+  const expiredLabel = t('common.expired');
   return (
     <ResponsiveContainer width="100%" height={320}>
       <AreaChart data={data}>
@@ -65,7 +70,7 @@ export default function ClientSigningTrendChart({ data = [] }) {
           fill="url(#gradientCompleted)"
           dot={false}
           activeDot={{ r: 6, fill: '#06b6d4', stroke: '#fff', strokeWidth: 2 }}
-          name="Completed"
+          name={completedLabel}
         />
         <Area
           type="monotone"
@@ -75,7 +80,7 @@ export default function ClientSigningTrendChart({ data = [] }) {
           fill="url(#gradientRejected)"
           dot={false}
           activeDot={{ r: 6, fill: '#1e293b', stroke: '#fff', strokeWidth: 2 }}
-          name="Rejected"
+          name={rejectedLabel}
         />
         <Area
           type="monotone"
@@ -85,7 +90,7 @@ export default function ClientSigningTrendChart({ data = [] }) {
           fill="url(#gradientExpired)"
           dot={false}
           activeDot={{ r: 6, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2 }}
-          name="Expired"
+          name={expiredLabel}
         />
       </AreaChart>
     </ResponsiveContainer>

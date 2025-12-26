@@ -1,10 +1,11 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { 
-  MoreHorizontal, 
-  Eye, 
-  Bell, 
-  Calendar, 
+import { useTranslation } from 'react-i18next';
+import {
+  MoreHorizontal,
+  Eye,
+  Bell,
+  Calendar,
   Clock,
   FileText
 } from 'lucide-react';
@@ -21,6 +22,7 @@ import ProgressBar from '@/components/ui-custom/ProgressBar';
 import { PartyStatusGroup } from '@/components/ui-custom/PartyStatusIcon';
 
 export default function ContractCard({ contract, onClick, className }) {
+  const { t } = useTranslation();
   const {
     id,
     name,
@@ -34,7 +36,7 @@ export default function ContractCard({ contract, onClick, className }) {
     createdAt,
     priority
   } = contract;
-  
+
   return (
     <div 
       className={cn(
@@ -62,7 +64,7 @@ export default function ContractCard({ contract, onClick, className }) {
       {/* Progress */}
       <div className="mb-4">
         <div className="flex items-center justify-between text-sm mb-2">
-          <span className="text-slate-500">Signing Progress</span>
+          <span className="text-slate-500">{t('contracts.signingProgress', 'Signing Progress')}</span>
           <span className="font-medium text-slate-700">{signedCount}/{totalParties}</span>
         </div>
         <ProgressBar value={signedCount} max={totalParties} />
@@ -102,11 +104,11 @@ export default function ContractCard({ contract, onClick, className }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>View Details</DropdownMenuItem>
-              <DropdownMenuItem>Send Reminder</DropdownMenuItem>
-              <DropdownMenuItem>Download PDF</DropdownMenuItem>
+              <DropdownMenuItem>{t('contracts.viewDetails', 'View Details')}</DropdownMenuItem>
+              <DropdownMenuItem>{t('contracts.sendReminder', 'Send Reminder')}</DropdownMenuItem>
+              <DropdownMenuItem>{t('contracts.downloadPdf', 'Download PDF')}</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600">Cancel Contract</DropdownMenuItem>
+              <DropdownMenuItem className="text-red-600">{t('contracts.cancelContract', 'Cancel Contract')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

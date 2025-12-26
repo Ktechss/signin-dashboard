@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { 
-  Search, 
-  Download, 
-  Bell, 
+import {
+  Search,
+  Bell,
   MoreHorizontal,
   Eye,
   RefreshCw,
@@ -87,12 +86,6 @@ export default function SigningRequests() {
             <h1 className="text-2xl font-bold text-slate-900">Signing Requests</h1>
             <p className="text-slate-500 mt-1">Track individual signing requests and their status.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" className="gap-2">
-              <Download className="w-4 h-4" />
-              Export CSV
-            </Button>
-          </div>
         </div>
         
         {/* Stats */}
@@ -152,10 +145,6 @@ export default function SigningRequests() {
               <Button variant="outline" size="sm" className="gap-2 bg-white">
                 <Bell className="w-4 h-4" />
                 Send Reminder
-              </Button>
-              <Button variant="outline" size="sm" className="gap-2 bg-white">
-                <Download className="w-4 h-4" />
-                Export
               </Button>
               <Button variant="outline" size="sm" className="gap-2 bg-white">
                 <CheckCircle2 className="w-4 h-4" />
@@ -223,10 +212,6 @@ export default function SigningRequests() {
                           <DropdownMenuItem className="gap-2">
                             <RefreshCw className="w-4 h-4" />
                             Retry Verification
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2">
-                            <Download className="w-4 h-4" />
-                            Download Log
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="gap-2 text-red-600">

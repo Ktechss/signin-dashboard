@@ -10,8 +10,6 @@ import {
   Key,
   KeyRound,
   Shield,
-  RefreshCw,
-  Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -109,30 +107,6 @@ export default function AuditLogs() {
     setLogs(filteredLogs);
   };
 
-  const handleRefresh = () => {
-    loadLogs();
-  };
-
-  const handleExport = () => {
-    const csvContent = [
-      ['Timestamp', 'Action', 'User', 'Details'].join(','),
-      ...logs.map(log => [
-        new Date(log.timestamp).toISOString(),
-        formatActionLabel(log.action),
-        log.userName,
-        `"${log.details}"`,
-      ].join(',')),
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
   const todayLogs = logs.filter(log => {
     const logDate = new Date(log.timestamp);
     const today = new Date();
@@ -147,16 +121,6 @@ export default function AuditLogs() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Audit Logs</h1>
             <p className="text-slate-500 mt-1">View system activity and user actions.</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="gap-2" onClick={handleRefresh}>
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </Button>
-            <Button variant="outline" className="gap-2" onClick={handleExport}>
-              <Download className="w-4 h-4" />
-              Export CSV
-            </Button>
           </div>
         </div>
 

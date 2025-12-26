@@ -1,17 +1,12 @@
 import { useState } from 'react';
 import {
-  Download,
   Calendar,
   FileText,
   CheckCircle2,
-  XCircle,
   Clock,
   Users,
-  Smartphone,
-  Globe,
   Loader2,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -132,24 +127,18 @@ export default function Analytics() {
               {selectedClient ? 'Client performance and trends' : 'Track performance and identify trends'}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-[160px]">
-                <Calendar className="w-4 h-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-                <SelectItem value="30d">Last 30 days</SelectItem>
-                <SelectItem value="90d">Last 90 days</SelectItem>
-                <SelectItem value="1y">Last year</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" className="gap-2">
-              <Download className="w-4 h-4" />
-              Export Report
-            </Button>
-          </div>
+          <Select value={dateRange} onValueChange={setDateRange}>
+            <SelectTrigger className="w-[160px]">
+              <Calendar className="w-4 h-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Last 7 days</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="90d">Last 90 days</SelectItem>
+              <SelectItem value="1y">Last year</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* KPI Cards */}

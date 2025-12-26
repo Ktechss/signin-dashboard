@@ -7,8 +7,14 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 
 export default function SigningByClientChart({ data = [] }) {
+  const { t } = useTranslation();
+  const adcbLabel = t('common.adcb_bank');
+  const emiratesLabel = t('common.emirates_nbd');
+  const fabLabel = t('common.first_abu_dhabi');
+  const mashreqLabel = t('common.mashreq_bank');
   return (
     <>
       <ResponsiveContainer width="100%" height={280}>
@@ -42,29 +48,29 @@ export default function SigningByClientChart({ data = [] }) {
               boxShadow: '0 4px 20px -2px rgb(0 0 0 / 0.1)',
             }}
           />
-          <Area type="monotone" dataKey="ad" stroke="#6366f1" strokeWidth={2} fill="url(#gradientAD)" name="ADCB Bank" />
-          <Area type="monotone" dataKey="en" stroke="#10b981" strokeWidth={2} fill="url(#gradientEN)" name="Emirates NBD" />
-          <Area type="monotone" dataKey="fa" stroke="#f59e0b" strokeWidth={2} fill="url(#gradientFA)" name="First Abu Dhabi" />
-          <Area type="monotone" dataKey="mb" stroke="#ec4899" strokeWidth={2} fill="url(#gradientMB)" name="Mashreq Bank" />
+          <Area type="monotone" dataKey="ad" stroke="#6366f1" strokeWidth={2} fill="url(#gradientAD)" name={adcbLabel} />
+          <Area type="monotone" dataKey="en" stroke="#10b981" strokeWidth={2} fill="url(#gradientEN)" name={emiratesLabel} />
+          <Area type="monotone" dataKey="fa" stroke="#f59e0b" strokeWidth={2} fill="url(#gradientFA)" name={fabLabel} />
+          <Area type="monotone" dataKey="mb" stroke="#ec4899" strokeWidth={2} fill="url(#gradientMB)" name={mashreqLabel} />
         </AreaChart>
       </ResponsiveContainer>
       {/* Legend */}
       <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-4 text-xs">
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-[#6366f1]" />
-          <span className="text-slate-600">ADCB Bank</span>
+          <span className="text-slate-600">{adcbLabel}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />
-          <span className="text-slate-600">Emirates NBD</span>
+          <span className="text-slate-600">{emiratesLabel}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
-          <span className="text-slate-600">First Abu Dhabi</span>
+          <span className="text-slate-600">{fabLabel}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-[#ec4899]" />
-          <span className="text-slate-600">Mashreq Bank</span>
+          <span className="text-slate-600">{mashreqLabel}</span>
         </div>
       </div>
     </>

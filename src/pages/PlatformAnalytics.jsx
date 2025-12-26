@@ -1,17 +1,14 @@
 import { useState } from 'react';
 import {
-  Download,
   Calendar,
   CheckCircle2,
   Clock,
   Users,
-  Layers,
   Building2,
-  RefreshCw,
   Signature,
   Loader2,
+  Layers,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -28,44 +25,42 @@ import {
   ContractStatusChart,
   DeviceDistributionChart,
 } from '@/components/analytics';
-import { analyticsApi, clientsApi, channelsApi } from '@/services/api';
+import { analyticsApi, clientsApi } from '@/services/api';
 import { useFetch } from '@/hooks/useApi';
 
 export default function PlatformAnalytics() {
   const [dateRange, setDateRange] = useState('30d');
   const [selectedClient, setSelectedClient] = useState('all');
-  const [selectedChannel, setSelectedChannel] = useState('all');
 
-  // Fetch clients and channels for filters
+  // Fetch clients for filter
   const { data: clientsData } = useFetch(() => clientsApi.getAll(), []);
-  const { data: channelsData } = useFetch(() => channelsApi.getAll(), []);
 
   // Fetch analytics data
-  const { data: platformStats, loading: statsLoading, refetch: refetchStats } = useFetch(
+  const { data: platformStats, loading: statsLoading } = useFetch(
     () => analyticsApi.getPlatformStats(selectedClient),
     [selectedClient]
   );
-  const { data: dailyStatus, loading: dailyLoading, refetch: refetchDaily } = useFetch(
+  const { data: dailyStatus, loading: dailyLoading } = useFetch(
     () => analyticsApi.getDailyStatus(selectedClient),
     [selectedClient]
   );
-  const { data: distribution, loading: distLoading, refetch: refetchDist } = useFetch(
+  const { data: distribution, loading: distLoading } = useFetch(
     () => analyticsApi.getDistribution(selectedClient),
     [selectedClient]
   );
-  const { data: byClient, loading: byClientLoading, refetch: refetchByClient } = useFetch(
+  const { data: byClient, loading: byClientLoading } = useFetch(
     () => analyticsApi.getByClient(),
     []
   );
-  const { data: byChannel, loading: byChannelLoading, refetch: refetchByChannel } = useFetch(
+  const { data: byChannel, loading: byChannelLoading } = useFetch(
     () => analyticsApi.getByChannel(selectedClient),
     [selectedClient]
   );
-  const { data: contractStatus, loading: contractLoading, refetch: refetchContract } = useFetch(
+  const { data: contractStatus, loading: contractLoading } = useFetch(
     () => analyticsApi.getContractStatus(selectedClient),
     [selectedClient]
   );
-  const { data: devices, loading: devicesLoading, refetch: refetchDevices } = useFetch(
+  const { data: devices, loading: devicesLoading } = useFetch(
     () => analyticsApi.getDevices(selectedClient),
     [selectedClient]
   );
@@ -74,12 +69,6 @@ export default function PlatformAnalytics() {
   const clients = [
     { id: 'all', name: 'All Clients' },
     ...(clientsData || []).map(c => ({ id: String(c.id), name: c.name, abbr: c.abbr }))
-  ];
-
-  // Build channels list for filter
-  const channels = [
-    { id: 'all', name: 'All Channels' },
-    ...(channelsData || []).map(c => ({ id: String(c.id), name: c.name }))
   ];
 
   // Build KPI stats from platform stats
@@ -136,18 +125,6 @@ export default function PlatformAnalytics() {
     },
   ] : [];
 
-  const handleRefresh = () => {
-    refetchStats();
-    refetchDaily();
-    refetchDist();
-    refetchByClient();
-    refetchByChannel();
-    refetchContract();
-    refetchDevices();
-  };
-
-  const isLoading = statsLoading || dailyLoading || distLoading || byClientLoading || byChannelLoading || contractLoading || devicesLoading;
-
   return (
     <div className="min-h-screen bg-slate-50/50">
       <div className="p-6 lg:p-8 max-w-8xl mx-auto space-y-6">
@@ -175,21 +152,6 @@ export default function PlatformAnalytics() {
               </SelectContent>
             </Select>
 
-            {/* Channel Filter */}
-            <Select value={selectedChannel} onValueChange={setSelectedChannel}>
-              <SelectTrigger className="w-[180px]">
-                <Layers className="w-4 h-4 mr-2 text-slate-400" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {channels.map((channel) => (
-                  <SelectItem key={channel.id} value={channel.id}>
-                    {channel.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
             {/* Date Range */}
             <Select value={dateRange} onValueChange={setDateRange}>
               <SelectTrigger className="w-[160px]">
@@ -203,15 +165,6 @@ export default function PlatformAnalytics() {
                 <SelectItem value="1y">Last year</SelectItem>
               </SelectContent>
             </Select>
-
-            <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading}>
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            </Button>
-
-            <Button variant="outline" className="gap-2">
-              <Download className="w-4 h-4" />
-              Export
-            </Button>
           </div>
         </div>
 
