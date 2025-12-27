@@ -19,26 +19,17 @@ export default function Templates() {
   const [userTemplates, setUserTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Load both sample blueprints AND localStorage templates
+  // Load templates from API
   useEffect(() => {
     const loadBlueprints = async () => {
       setLoading(true);
       try {
-        // Load sample blueprints from JSON file
-        const response = await fetch('/sample-blueprints.json');
-        const sampleBlueprints = await response.json();
-
-        // Load user-created templates from localStorage
-        const savedTemplates = getTemplates();
-
-        // Combine both arrays - sample blueprints first, then user templates
-        const allTemplates = [...sampleBlueprints, ...savedTemplates];
-        setUserTemplates(allTemplates);
+        // Load templates from API
+        const templates = await getTemplates();
+        setUserTemplates(templates);
       } catch (error) {
         console.error('Error loading blueprints:', error);
-        // If sample blueprints fail to load, at least show localStorage templates
-        const savedTemplates = getTemplates();
-        setUserTemplates(savedTemplates);
+        setUserTemplates([]);
       } finally {
         setLoading(false);
       }

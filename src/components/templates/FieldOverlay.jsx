@@ -1,6 +1,26 @@
 import React from 'react';
-import { Pen, Type, Calendar, CheckSquare, Hash, Mail, Phone, FileText } from 'lucide-react';
+import { Pen, Type, Calendar, CheckSquare, Hash, Mail, Phone, FileText, Building2, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// Signer type configurations for visual display
+export const SIGNER_TYPE_CONFIG = {
+  internal: {
+    id: 'internal',
+    label: 'Internal',
+    icon: Building2,
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-100',
+    borderColor: 'border-emerald-300',
+  },
+  external: {
+    id: 'external',
+    label: 'External',
+    icon: User,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-100',
+    borderColor: 'border-blue-300',
+  },
+};
 
 // Validation configurations for each field type
 export const FIELD_VALIDATIONS = {
@@ -156,15 +176,20 @@ export function FieldOverlay({
   field,
   documentWidth = 595,
   documentHeight = 842,
+  signerType = null, // 'internal' or 'external'
+  signerName = null,
+  showSignerBadge = false,
   className
 }) {
   const colorScheme = getRoleColorScheme(field.role);
   const displayLabel = getFieldDisplayLabel(field);
+  const signerConfig = signerType ? SIGNER_TYPE_CONFIG[signerType] : null;
+  const SignerIcon = signerConfig?.icon;
 
   return (
     <div
       className={cn(
-        'absolute border-2 border-dashed rounded flex items-center justify-center',
+        'absolute border-2 border-dashed rounded flex items-center justify-center group',
         colorScheme.border,
         colorScheme.bg,
         className
@@ -179,6 +204,21 @@ export function FieldOverlay({
       <span className={cn('text-xs font-medium truncate px-2', colorScheme.text)}>
         {displayLabel}
       </span>
+
+      {/* Signer Type Badge - shown on hover or always if showSignerBadge */}
+      {signerConfig && (
+        <div
+          className={cn(
+            'absolute -top-5 left-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-opacity',
+            signerConfig.bgColor,
+            signerConfig.color,
+            showSignerBadge ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          )}
+        >
+          <SignerIcon className="w-2.5 h-2.5" />
+          <span>{signerName || signerConfig.label}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -186,25 +226,39 @@ export function FieldOverlay({
 // Render multiple field overlays
 export function FieldOverlayList({
   fields = [],
+  parties = [], // Array of party objects with id, name, signerType
   documentWidth = 595,
   documentHeight = 842,
+  showSignerBadge = false,
   className
 }) {
   if (!fields || !Array.isArray(fields) || fields.length === 0) {
     return null;
   }
 
+  // Helper to get party info by role/id
+  const getPartyInfo = (role) => {
+    const party = parties.find(p => p.id?.toString() === role?.toString());
+    return party ? { signerType: party.signerType, signerName: party.name } : {};
+  };
+
   return (
     <>
-      {fields.map((field) => (
-        <FieldOverlay
-          key={field.id}
-          field={field}
-          documentWidth={documentWidth}
-          documentHeight={documentHeight}
-          className={className}
-        />
-      ))}
+      {fields.map((field) => {
+        const partyInfo = getPartyInfo(field.role);
+        return (
+          <FieldOverlay
+            key={field.id}
+            field={field}
+            documentWidth={documentWidth}
+            documentHeight={documentHeight}
+            signerType={partyInfo.signerType}
+            signerName={partyInfo.signerName}
+            showSignerBadge={showSignerBadge}
+            className={className}
+          />
+        );
+      })}
     </>
   );
 }

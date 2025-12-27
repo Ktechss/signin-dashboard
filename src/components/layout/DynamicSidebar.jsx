@@ -26,6 +26,7 @@ import {
   Plus,
   Library,
   Languages,
+  FileSignature,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getUserInitials } from '@/utils/userStorage';
@@ -51,6 +52,7 @@ const platformNavItems = [
 const clientNavItems = [
   { id: 'Overview', labelKey: 'nav.overview', icon: LayoutDashboard, href: 'Dashboard' },
   { id: 'Signing', labelKey: 'nav.signing', icon: Signature, href: 'Current' },
+  { id: 'Contracts', labelKey: 'nav.contracts', icon: FileSignature, href: 'SigningRequests' },
   { id: 'Blueprints', labelKey: 'nav.blueprints', icon: Layers, href: 'Templates' },
   { id: 'UserManagement', labelKey: 'nav.userManagement', icon: Users, href: 'UserManagement' },
   { id: 'APIKeys', labelKey: 'nav.apiKeys', icon: Key, href: 'APIKeys' },

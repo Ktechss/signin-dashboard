@@ -3,6 +3,7 @@ import Layout from "./Layout.jsx";
 import Dashboard from "./Dashboard";
 import Current from "./Current";
 import Contracts from "./Contracts";
+import ContractCreate from "./ContractCreate";
 import ContractDetail from "./ContractDetail";
 import SigningRequests from "./SigningRequests";
 import Templates from "./Templates";
@@ -25,6 +26,7 @@ import BlueprintGallery from "./BlueprintGallery";
 import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 import { getCurrentUser, logout as logoutUser, isAuthenticated } from '@/utils/userStorage';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { clientsApi } from '@/services/api';
 
 // Auth Context
 const AuthContext = createContext(null);
@@ -41,6 +43,7 @@ const PAGES = {
     Dashboard: Dashboard,
     Current: Current,
     Contracts: Contracts,
+    ContractCreate: ContractCreate,
     ContractDetail: ContractDetail,
     SigningRequests: SigningRequests,
     Templates: Templates,
@@ -90,7 +93,7 @@ function ProtectedRoute({ children }) {
 function PagesContent() {
     const location = useLocation();
     const currentPage = _getCurrentPage(location.pathname);
-    const { user, handleLogout, selectedClient, handleClientSelect, handleBackToPlatform } = useAuth();
+    const { user, handleLogout, selectedClient, handleClientSelect, handleBackToPlatform, isPlatformAdmin } = useAuth();
 
     // If on login page and already authenticated, redirect based on selectedClient
     if (location.pathname === '/login' && user) {
@@ -157,6 +160,21 @@ function PagesContent() {
                         onBackToPlatform={handleBackToPlatform}
                     >
                         <Contracts />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/ContractCreate" element={
+                <ProtectedRoute>
+                    <Layout
+                        currentPageName={currentPage}
+                        user={user}
+                        onLogout={handleLogout}
+                        selectedClient={selectedClient}
+                        onClientSelect={handleClientSelect}
+                        onBackToPlatform={handleBackToPlatform}
+                    >
+                        <ContractCreate />
                     </Layout>
                 </ProtectedRoute>
             } />
@@ -388,31 +406,41 @@ function PagesContent() {
 
             <Route path="/PlatformAnalytics" element={
                 <ProtectedRoute>
-                    <Layout
-                        currentPageName={currentPage}
-                        user={user}
-                        onLogout={handleLogout}
-                        selectedClient={selectedClient}
-                        onClientSelect={handleClientSelect}
-                        onBackToPlatform={handleBackToPlatform}
-                    >
-                        <PlatformAnalytics />
-                    </Layout>
+                    {/* Only platform admins can access - redirect clients to Dashboard */}
+                    {!isPlatformAdmin ? (
+                        <Navigate to="/Dashboard" replace />
+                    ) : (
+                        <Layout
+                            currentPageName={currentPage}
+                            user={user}
+                            onLogout={handleLogout}
+                            selectedClient={selectedClient}
+                            onClientSelect={handleClientSelect}
+                            onBackToPlatform={handleBackToPlatform}
+                        >
+                            <PlatformAnalytics />
+                        </Layout>
+                    )}
                 </ProtectedRoute>
             } />
 
             <Route path="/PlatformAuditLogs" element={
                 <ProtectedRoute>
-                    <Layout
-                        currentPageName={currentPage}
-                        user={user}
-                        onLogout={handleLogout}
-                        selectedClient={selectedClient}
-                        onClientSelect={handleClientSelect}
-                        onBackToPlatform={handleBackToPlatform}
-                    >
-                        <PlatformAuditLogs />
-                    </Layout>
+                    {/* Only platform admins can access - redirect clients to Dashboard */}
+                    {!isPlatformAdmin ? (
+                        <Navigate to="/Dashboard" replace />
+                    ) : (
+                        <Layout
+                            currentPageName={currentPage}
+                            user={user}
+                            onLogout={handleLogout}
+                            selectedClient={selectedClient}
+                            onClientSelect={handleClientSelect}
+                            onBackToPlatform={handleBackToPlatform}
+                        >
+                            <PlatformAuditLogs />
+                        </Layout>
+                    )}
                 </ProtectedRoute>
             } />
 
@@ -443,21 +471,44 @@ export default function Pages() {
     const [selectedClient, setSelectedClient] = useState(null);
 
     useEffect(() => {
-        // Check for existing session
-        const currentUser = getCurrentUser();
-        setUser(currentUser);
+        const initializeAuth = async () => {
+            // Check for existing session
+            const currentUser = getCurrentUser();
+            setUser(currentUser);
 
-        // Restore selected client from localStorage
-        const savedClient = localStorage.getItem('selectedClient');
-        if (savedClient) {
-            try {
-                setSelectedClient(JSON.parse(savedClient));
-            } catch (e) {
-                localStorage.removeItem('selectedClient');
+            if (currentUser) {
+                // If user has a clientId (is a client user), auto-set their client
+                if (currentUser.clientId) {
+                    try {
+                        const clients = await clientsApi.getAll();
+                        const userClient = clients.find(c => c.id === currentUser.clientId);
+                        if (userClient) {
+                            setSelectedClient(userClient);
+                            localStorage.setItem('selectedClient', JSON.stringify(userClient));
+                        }
+                    } catch (error) {
+                        console.error('Failed to fetch client:', error);
+                        // Fallback: create a minimal client object from user data
+                        const fallbackClient = { id: currentUser.clientId, name: 'Client' };
+                        setSelectedClient(fallbackClient);
+                    }
+                } else {
+                    // Root/platform admin - restore selected client from localStorage if any
+                    const savedClient = localStorage.getItem('selectedClient');
+                    if (savedClient) {
+                        try {
+                            setSelectedClient(JSON.parse(savedClient));
+                        } catch (e) {
+                            localStorage.removeItem('selectedClient');
+                        }
+                    }
+                }
             }
-        }
 
-        setLoading(false);
+            setLoading(false);
+        };
+
+        initializeAuth();
     }, []);
 
     const handleLogin = (userData) => {
@@ -482,12 +533,20 @@ export default function Pages() {
     };
 
     const handleBackToPlatform = () => {
+        // Only allow root/platform users to go back to platform view
+        if (user?.clientId) {
+            // Client users cannot go back to platform - they stay in their client context
+            return;
+        }
         setSelectedClient(null);
         // Clear from localStorage
         localStorage.removeItem('selectedClient');
         // Navigate to PlatformAnalytics when going back to platform
         window.location.href = '/PlatformAnalytics';
     };
+
+    // Check if user is a platform admin (no clientId)
+    const isPlatformAdmin = user && !user.clientId;
 
     if (loading) {
         return (
@@ -505,7 +564,8 @@ export default function Pages() {
                 handleLogout,
                 selectedClient,
                 handleClientSelect,
-                handleBackToPlatform
+                handleBackToPlatform,
+                isPlatformAdmin
             }}>
                 <Router>
                     <PagesContent />
