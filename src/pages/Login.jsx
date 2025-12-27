@@ -1,12 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Eye,
   EyeOff,
-  Mail,
   Lock,
   ScanFace,
   ShieldCheck,
@@ -14,21 +13,97 @@ import {
   AlertCircle,
   Shield,
   Globe,
+  ArrowLeft,
+  User,
+  Building2,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { authApi } from '@/services/api';
+import { authApi, usersApi } from '@/services/api';
+
+// Client configurations with colors
+const clients = [
+  { id: 1, name: 'ADCB Bank', abbr: 'AD', color: 'from-red-600 to-red-700', hoverBg: 'hover:border-red-300 hover:bg-red-50/50' },
+  { id: 2, name: 'Emirates NBD', abbr: 'EN', color: 'from-blue-600 to-blue-700', hoverBg: 'hover:border-blue-300 hover:bg-blue-50/50' },
+  { id: 3, name: 'First Abu Dhabi Bank', abbr: 'FA', color: 'from-purple-600 to-purple-700', hoverBg: 'hover:border-purple-300 hover:bg-purple-50/50' },
+  { id: 4, name: 'Mashreq Bank', abbr: 'MB', color: 'from-orange-500 to-orange-600', hoverBg: 'hover:border-orange-300 hover:bg-orange-50/50' },
+];
+
+// Get workflow role badges
+const getWorkflowBadges = (permissions) => {
+  const badges = [];
+  if (permissions?.canCreate) badges.push('Creator');
+  if (permissions?.canApprove) badges.push('Approver');
+  if (permissions?.canSend) badges.push('Sender');
+  if (permissions?.canSign) badges.push('Signer');
+  if (permissions?.canViewAll) badges.push('Viewer');
+  return badges;
+};
 
 export default function Login({ onLogin }) {
   const { t } = useTranslation();
   const { language, toggleLanguage, isRTL } = useLanguage();
   const navigate = useNavigate();
+
+  // View states: 'main' | 'client-users' | 'login-form'
+  const [view, setView] = useState('main');
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [clientUsers, setClientUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Fetch users when client is selected
+  useEffect(() => {
+    if (selectedClient) {
+      fetchClientUsers(selectedClient.id);
+    }
+  }, [selectedClient]);
+
+  const fetchClientUsers = async (clientId) => {
+    setLoadingUsers(true);
+    try {
+      const users = await usersApi.getByClient(clientId);
+      setClientUsers(users);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setClientUsers([]);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleClientSelect = (client) => {
+    setSelectedClient(client);
+    setView('client-users');
+    setError('');
+  };
+
+  const handleUserSelect = (user) => {
+    setSelectedUser(user);
+    setView('login-form');
+    setPassword('');
+    setError('');
+  };
+
+  const handleBack = () => {
+    if (view === 'login-form') {
+      setView('client-users');
+      setSelectedUser(null);
+      setPassword('');
+    } else if (view === 'client-users') {
+      setView('main');
+      setSelectedClient(null);
+      setClientUsers([]);
+    }
+    setError('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,16 +111,15 @@ export default function Login({ onLogin }) {
     setIsLoading(true);
 
     try {
+      const email = selectedUser?.email || '';
       const result = await authApi.login(email, password);
 
       if (result.success && result.user) {
-        // Store user in localStorage for session persistence
         localStorage.setItem('currentUser', JSON.stringify(result.user));
 
         if (onLogin) {
           onLogin(result.user);
         }
-        // Navigate to "/" - routing will redirect to PlatformAnalytics (admin) or Dashboard (client)
         navigate('/');
       } else {
         setError(result.error || 'Login failed');
@@ -57,31 +131,17 @@ export default function Login({ onLogin }) {
     }
   };
 
-  const fillDemoCredentials = (type) => {
-    switch (type) {
-      case 'admin':
-        setEmail('admin@uaekyc.com');
-        setPassword('admin123');
-        break;
-      case 'adcb':
-        setEmail('ahmed.khan@adcb.ae');
-        setPassword('pass123');
-        break;
-      case 'enbd':
-        setEmail('sara.mohammed@enbd.ae');
-        setPassword('pass123');
-        break;
-      case 'fab':
-        setEmail('mariam.khalid@fab.ae');
-        setPassword('pass123');
-        break;
-      case 'mashreq':
-        setEmail('layla.ahmed@mashreq.ae');
-        setPassword('pass123');
-        break;
-      default:
-        break;
-    }
+  const handlePlatformAdminLogin = () => {
+    setSelectedUser({
+      email: 'admin@uaekyc.com',
+      name: 'Platform Admin',
+      designation: 'System Administrator',
+      role: 'superadmin',
+    });
+    setSelectedClient(null);
+    setView('login-form');
+    setPassword('');
+    setError('');
   };
 
   return (
@@ -220,171 +280,282 @@ export default function Login({ onLogin }) {
             </Button>
           </div>
 
-          {/* Header */}
-          <div className={`mb-10 ${isRTL ? 'text-right' : ''}`}>
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">{t('login.title')}</h1>
-            <p className="text-slate-500">{t('login.subtitle')}</p>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Error Message */}
-            {error && (
+          <AnimatePresence mode="wait">
+            {/* Main View - Client Selection */}
+            {view === 'main' && (
               <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl"
+                key="main"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
               >
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-                <p className="text-sm text-red-700">{error}</p>
+                {/* Header */}
+                <div className={`mb-8 ${isRTL ? 'text-right' : ''}`}>
+                  <h1 className="text-3xl font-bold text-slate-900 mb-2">{t('login.title')}</h1>
+                  <p className="text-slate-500">Select your organization to continue</p>
+                </div>
+
+                {/* Platform Admin */}
+                <div className="mb-6">
+                  <p className="text-xs text-slate-500 mb-3 uppercase tracking-wide font-medium">Platform Access</p>
+                  <button
+                    type="button"
+                    onClick={handlePlatformAdminLogin}
+                    className="w-full p-4 rounded-xl border border-slate-200 hover:border-gray-400 hover:bg-gray-50/50 transition-all duration-200 text-left flex items-center gap-4 group"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-black via-gray-800 to-black flex items-center justify-center shadow-lg shadow-black/20 group-hover:shadow-black/30 transition-shadow">
+                      <Shield className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-slate-900">Platform Admin (ICP)</p>
+                      <p className="text-xs text-slate-500">Super Admin - All Clients Access</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-600" />
+                  </button>
+                </div>
+
+                {/* Client Selection */}
+                <div>
+                  <p className="text-xs text-slate-500 mb-3 uppercase tracking-wide font-medium">Client Organizations</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {clients.map((client) => (
+                      <button
+                        key={client.id}
+                        type="button"
+                        onClick={() => handleClientSelect(client)}
+                        className={`p-4 rounded-xl border border-slate-200 ${client.hoverBg} transition-all duration-200 text-left group`}
+                      >
+                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${client.color} flex items-center justify-center shadow-md mb-3`}>
+                          <span className="text-xs font-bold text-white">{client.abbr}</span>
+                        </div>
+                        <p className="text-sm font-semibold text-slate-900">{client.name}</p>
+                        <p className="text-[10px] text-slate-500 mt-1">Click to view users</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <p className="mt-10 text-center text-xs text-slate-400">
+                  By signing in, you agree to our{' '}
+                  <a href="#" className="text-gray-700 hover:text-black hover:underline">Terms of Service</a>
+                  {' '}and{' '}
+                  <a href="#" className="text-gray-700 hover:text-black hover:underline">Privacy Policy</a>
+                </p>
               </motion.div>
             )}
 
-            {/* Email Field */}
-            <div className={`space-y-2 ${isRTL ? 'text-right' : ''}`}>
-              <Label htmlFor="email" className="text-sm font-medium text-slate-700">
-                {t('login.email')}
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-12 h-12 bg-slate-50/50 border-slate-200 focus:bg-white focus:border-gray-800 focus:ring-gray-800/20 transition-all rounded-xl"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Password Field */}
-            <div className={`space-y-2 ${isRTL ? 'text-right' : ''}`}>
-              <Label htmlFor="password" className="text-sm font-medium text-slate-700">
-                {t('login.password')}
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-12 pr-12 h-12 bg-slate-50/50 border-slate-200 focus:bg-white focus:border-gray-800 focus:ring-gray-800/20 transition-all rounded-xl"
-                  required
-                />
+            {/* Client Users View */}
+            {view === 'client-users' && selectedClient && (
+              <motion.div
+                key="client-users"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {/* Back Button */}
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  onClick={handleBack}
+                  className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 mb-6 transition-colors"
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to organizations
                 </button>
-              </div>
-            </div>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-12 bg-gradient-to-r from-black via-gray-800 to-black hover:from-gray-900 hover:via-gray-700 hover:to-gray-900 text-white font-medium rounded-xl shadow-lg shadow-black/25 transition-all duration-300 hover:shadow-xl hover:shadow-black/30 disabled:opacity-70"
-            >
-              {isLoading ? (
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-                />
-              ) : (
-                t('login.signIn')
-              )}
-            </Button>
-          </form>
+                {/* Client Header */}
+                <div className="flex items-center gap-4 mb-6">
+                  <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${selectedClient.color} flex items-center justify-center shadow-lg`}>
+                    <span className="text-lg font-bold text-white">{selectedClient.abbr}</span>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">{selectedClient.name}</h2>
+                    <p className="text-sm text-slate-500">Select your account</p>
+                  </div>
+                </div>
 
-          {/* Demo Credentials */}
-          <div className="mt-8 pt-6 border-t border-slate-200">
-            <p className={`text-xs text-slate-500 mb-3 ${isRTL ? 'text-right' : 'text-center'}`}>{t('login.demoCredentials')}</p>
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials('admin')}
-                className="w-full p-4 rounded-xl border border-slate-200 hover:border-gray-400 hover:bg-gray-50/50 transition-all duration-200 text-left flex items-center gap-4 group"
+                {/* Error Message */}
+                {error && (
+                  <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-4">
+                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                )}
+
+                {/* Users List */}
+                <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                  {loadingUsers ? (
+                    <div className="text-center py-8">
+                      <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin mx-auto mb-3" />
+                      <p className="text-sm text-slate-500">Loading users...</p>
+                    </div>
+                  ) : clientUsers.length === 0 ? (
+                    <div className="text-center py-8">
+                      <User className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                      <p className="text-sm text-slate-500">No users found for this client</p>
+                    </div>
+                  ) : (
+                    clientUsers.map((user) => {
+                      const badges = getWorkflowBadges(user.workflowPermissions);
+                      return (
+                        <button
+                          key={user.id}
+                          onClick={() => handleUserSelect(user)}
+                          className="w-full p-4 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 transition-all duration-200 text-left group"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-medium text-white">
+                                {user.name?.split(' ').map(n => n[0]).join('').toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-semibold text-slate-900">{user.name}</p>
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                                  user.role === 'admin'
+                                    ? 'bg-slate-900 text-white'
+                                    : 'bg-slate-100 text-slate-600'
+                                }`}>
+                                  {user.role}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500 mt-0.5">{user.designation}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">{user.email}</p>
+
+                              {/* Workflow Badges */}
+                              {badges.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {badges.map((badge) => (
+                                    <span
+                                      key={badge}
+                                      className="text-[9px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded"
+                                    >
+                                      {badge}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 mt-3" />
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Login Form View */}
+            {view === 'login-form' && selectedUser && (
+              <motion.div
+                key="login-form"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
               >
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-black via-gray-800 to-black flex items-center justify-center shadow-lg shadow-black/20 group-hover:shadow-black/30 transition-shadow">
-                  <Shield className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Platform Admin</p>
-                  <p className="text-xs text-slate-500">admin@uaekyc.com / admin123</p>
-                </div>
-              </button>
-            </div>
+                {/* Back Button */}
+                <button
+                  onClick={handleBack}
+                  className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 mb-6 transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  {selectedClient ? 'Back to users' : 'Back to organizations'}
+                </button>
 
-            <p className="text-xs text-slate-500 text-center mt-6 mb-3">Client Logins (Click to fill)</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials('adcb')}
-                className="p-3 rounded-xl border border-slate-200 hover:border-red-300 hover:bg-red-50/50 transition-all duration-200 text-left group"
-              >
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-md mb-2">
-                  <span className="text-xs font-bold text-white">AD</span>
+                {/* User Header */}
+                <div className="flex items-center gap-4 mb-8 p-4 bg-slate-50 rounded-xl">
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center ${
+                    selectedUser.role === 'superadmin'
+                      ? 'bg-gradient-to-br from-black via-gray-800 to-black'
+                      : 'bg-gradient-to-br from-slate-600 to-slate-700'
+                  }`}>
+                    {selectedUser.role === 'superadmin' ? (
+                      <Shield className="w-7 h-7 text-white" />
+                    ) : (
+                      <span className="text-lg font-medium text-white">
+                        {selectedUser.name?.split(' ').map(n => n[0]).join('').toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">{selectedUser.name}</h2>
+                    <p className="text-sm text-slate-500">{selectedUser.designation}</p>
+                    <p className="text-xs text-slate-400">{selectedUser.email}</p>
+                  </div>
                 </div>
-                <p className="text-sm font-semibold text-slate-900">ADCB Bank</p>
-                <p className="text-[10px] text-slate-500">ahmed.khan@adcb.ae</p>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials('enbd')}
-                className="p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all duration-200 text-left group"
-              >
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-md mb-2">
-                  <span className="text-xs font-bold text-white">EN</span>
-                </div>
-                <p className="text-sm font-semibold text-slate-900">Emirates NBD</p>
-                <p className="text-[10px] text-slate-500">sara.mohammed@enbd.ae</p>
-              </button>
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Error Message */}
+                  {error && (
+                    <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+                      <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                      <p className="text-sm text-red-700">{error}</p>
+                    </div>
+                  )}
 
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials('fab')}
-                className="p-3 rounded-xl border border-slate-200 hover:border-purple-300 hover:bg-purple-50/50 transition-all duration-200 text-left group"
-              >
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center shadow-md mb-2">
-                  <span className="text-xs font-bold text-white">FA</span>
-                </div>
-                <p className="text-sm font-semibold text-slate-900">FAB</p>
-                <p className="text-[10px] text-slate-500">mariam.khalid@fab.ae</p>
-              </button>
+                  {/* Password Field */}
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-sm font-medium text-slate-700">
+                      Enter your password
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="pl-12 pr-12 h-12 bg-slate-50/50 border-slate-200 focus:bg-white focus:border-gray-800 focus:ring-gray-800/20 transition-all rounded-xl"
+                        required
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
 
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials('mashreq')}
-                className="p-3 rounded-xl border border-slate-200 hover:border-orange-300 hover:bg-orange-50/50 transition-all duration-200 text-left group"
-              >
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-md mb-2">
-                  <span className="text-xs font-bold text-white">MQ</span>
-                </div>
-                <p className="text-sm font-semibold text-slate-900">Mashreq</p>
-                <p className="text-[10px] text-slate-500">layla.ahmed@mashreq.ae</p>
-              </button>
-            </div>
-          </div>
+                  {/* Demo Password Hint */}
+                  <p className="text-xs text-slate-400 text-center">
+                    Demo password: <span className="font-mono bg-slate-100 px-2 py-0.5 rounded">
+                      {selectedUser.role === 'superadmin' ? 'admin123' : 'pass123'}
+                    </span>
+                  </p>
 
-          {/* Footer */}
-          <p className="mt-10 text-center text-xs text-slate-400">
-            By signing in, you agree to our{' '}
-            <a href="#" className="text-gray-700 hover:text-black hover:underline">Terms of Service</a>
-            {' '}and{' '}
-            <a href="#" className="text-gray-700 hover:text-black hover:underline">Privacy Policy</a>
-          </p>
+                  {/* Submit Button */}
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full h-12 bg-gradient-to-r from-black via-gray-800 to-black hover:from-gray-900 hover:via-gray-700 hover:to-gray-900 text-white font-medium rounded-xl shadow-lg shadow-black/25 transition-all duration-300 hover:shadow-xl hover:shadow-black/30 disabled:opacity-70"
+                  >
+                    {isLoading ? (
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                      />
+                    ) : (
+                      'Sign In'
+                    )}
+                  </Button>
+                </form>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     </div>

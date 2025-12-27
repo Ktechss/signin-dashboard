@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { createPageUrl } from '@/utils';
@@ -16,7 +16,6 @@ import {
   Moon,
   LogOut,
   LayoutDashboard,
-  Signature,
   Layers,
   Users,
   Key,
@@ -25,8 +24,12 @@ import {
   MoreVertical,
   Plus,
   Library,
-  Languages,
   FileSignature,
+  CheckCircle,
+  Send,
+  FilePen,
+  Clock,
+  Eye,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getUserInitials } from '@/utils/userStorage';
@@ -48,20 +51,6 @@ const platformNavItems = [
   { id: 'platform-settings', labelKey: 'nav.settings', icon: Settings, href: 'PlatformSettings' },
 ];
 
-// Client-level Navigation (when a client is selected)
-const clientNavItems = [
-  { id: 'Overview', labelKey: 'nav.overview', icon: LayoutDashboard, href: 'Dashboard' },
-  { id: 'Signing', labelKey: 'nav.signing', icon: Signature, href: 'Current' },
-  { id: 'Contracts', labelKey: 'nav.contracts', icon: FileSignature, href: 'SigningRequests' },
-  { id: 'Blueprints', labelKey: 'nav.blueprints', icon: Layers, href: 'Templates' },
-  { id: 'UserManagement', labelKey: 'nav.userManagement', icon: Users, href: 'UserManagement' },
-  { id: 'APIKeys', labelKey: 'nav.apiKeys', icon: Key, href: 'APIKeys' },
-  { id: 'AuditLogs', labelKey: 'nav.auditLogs', icon: ClipboardList, href: 'AuditLogs' },
-  { id: 'Billing', labelKey: 'nav.billing', icon: CreditCard, href: 'Billing' },
-  { id: 'Settings', labelKey: 'nav.settings', icon: Settings, href: 'Settings' },
-];
-
-
 // Mock clients list - replace with actual data
 const clients = [
   { id: 1, name: 'ADCB Bank', abbr: 'AD' },
@@ -69,6 +58,161 @@ const clients = [
   { id: 3, name: 'First Abu Dhabi', abbr: 'FA' },
   { id: 4, name: 'Mashreq Bank', abbr: 'MB' },
 ];
+
+// Build client nav items based on user permissions
+function getClientNavItems(user) {
+  const workflowPerms = user?.workflowPermissions || {};
+  const adminPerms = user?.adminPermissions || {};
+  const isAdmin = user?.role === 'admin';
+
+  const navItems = [];
+
+  // Overview - Everyone gets this
+  navItems.push({
+    id: 'Overview',
+    labelKey: 'nav.overview',
+    icon: LayoutDashboard,
+    href: 'Dashboard',
+  });
+
+  // Contracts Section - Based on workflow permissions
+  const contractChildren = [];
+
+  // All Contracts - Admin or canViewAll
+  if (isAdmin || workflowPerms.canViewAll) {
+    contractChildren.push({
+      id: 'all-contracts',
+      label: 'All Contracts',
+      href: 'Current',
+      icon: Eye,
+    });
+  }
+
+  // My Drafts - Creator
+  if (workflowPerms.canCreate) {
+    contractChildren.push({
+      id: 'my-drafts',
+      label: 'My Drafts',
+      href: 'Current',
+      params: { status: 'draft', filter: 'my' },
+      icon: FilePen,
+    });
+  }
+
+  // Pending Approval - Approver
+  if (workflowPerms.canApprove) {
+    contractChildren.push({
+      id: 'pending-approval',
+      label: 'Pending Approval',
+      href: 'Current',
+      params: { status: 'pending_approval' },
+      icon: Clock,
+      badge: true,
+    });
+  }
+
+  // Ready to Send - Sender
+  if (workflowPerms.canSend) {
+    contractChildren.push({
+      id: 'ready-to-send',
+      label: 'Ready to Send',
+      href: 'Current',
+      params: { status: 'approved,pending_send' },
+      icon: Send,
+      badge: true,
+    });
+  }
+
+  // Pending Signature - Internal Signer
+  if (workflowPerms.canSign) {
+    contractChildren.push({
+      id: 'pending-signature',
+      label: 'Pending Signature',
+      href: 'Current',
+      params: { status: 'pending_internal,sent', signer: 'me' },
+      icon: FileSignature,
+      badge: true,
+    });
+  }
+
+  // Completed - Everyone can see completed
+  contractChildren.push({
+    id: 'completed',
+    label: 'Completed',
+    href: 'Current',
+    params: { status: 'completed' },
+    icon: CheckCircle,
+  });
+
+  // Add Contracts section if user has any contract permissions
+  if (contractChildren.length > 0) {
+    navItems.push({
+      id: 'Contracts',
+      labelKey: 'nav.contracts',
+      icon: FileSignature,
+      children: contractChildren,
+    });
+  }
+
+  // Blueprints - Creator or admin with blueprints permission
+  if (workflowPerms.canCreate || adminPerms.blueprints) {
+    navItems.push({
+      id: 'Blueprints',
+      labelKey: 'nav.blueprints',
+      icon: Layers,
+      href: 'Templates',
+    });
+  }
+
+  // Admin-only sections
+  if (adminPerms.userManagement) {
+    navItems.push({
+      id: 'UserManagement',
+      labelKey: 'nav.userManagement',
+      icon: Users,
+      href: 'UserManagement',
+    });
+  }
+
+  if (adminPerms.apiKeys) {
+    navItems.push({
+      id: 'APIKeys',
+      labelKey: 'nav.apiKeys',
+      icon: Key,
+      href: 'APIKeys',
+    });
+  }
+
+  if (adminPerms.auditLogs) {
+    navItems.push({
+      id: 'AuditLogs',
+      labelKey: 'nav.auditLogs',
+      icon: ClipboardList,
+      href: 'AuditLogs',
+    });
+  }
+
+  if (adminPerms.billing) {
+    navItems.push({
+      id: 'Billing',
+      labelKey: 'nav.billing',
+      icon: CreditCard,
+      href: 'Billing',
+    });
+  }
+
+  // Settings - Admin only or has settings permission
+  if (isAdmin || adminPerms.settings) {
+    navItems.push({
+      id: 'Settings',
+      labelKey: 'nav.settings',
+      icon: Settings,
+      href: 'Settings',
+    });
+  }
+
+  return navItems;
+}
 
 export default function DynamicSidebar({
   currentPage,
@@ -81,7 +225,7 @@ export default function DynamicSidebar({
 }) {
   const { t } = useTranslation();
   const { language, toggleLanguage, isRTL } = useLanguage();
-  const [expandedItems, setExpandedItems] = useState(['logs']);
+  const [expandedItems, setExpandedItems] = useState(['logs', 'Contracts']);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
   const toggleExpand = (id) => {
@@ -91,10 +235,13 @@ export default function DynamicSidebar({
   };
 
   // Super Admin sees platform view, Staff sees client view directly
-  const isSuperAdmin = isAdmin;
+  const isSuperAdmin = user?.role === 'superadmin';
 
   // Check if we're in client mode (a client is selected OR user is staff)
   const isClientMode = !!selectedClient || !isSuperAdmin;
+
+  // Get dynamic nav items based on user permissions
+  const clientNavItems = useMemo(() => getClientNavItems(user), [user]);
 
   // Theme styles
   const theme = {
@@ -105,12 +252,13 @@ export default function DynamicSidebar({
       sectionText: 'text-gray-500',
       navActive: 'bg-white/10 text-white',
       navInactive: 'text-gray-400 hover:text-white hover:bg-white/5',
-      childActive: 'text-white',
-      childInactive: 'text-gray-500 hover:text-gray-300',
+      childActive: 'text-white bg-white/10',
+      childInactive: 'text-gray-500 hover:text-gray-300 hover:bg-white/5',
       clientBg: 'bg-white/5 border-white/10',
       clientLabel: 'text-gray-400',
       avatarBg: 'bg-gray-700 text-gray-300',
       email: 'text-gray-500',
+      badge: 'bg-red-500 text-white',
     },
     light: {
       bg: 'bg-white',
@@ -120,11 +268,12 @@ export default function DynamicSidebar({
       navActive: 'bg-slate-100 text-slate-900',
       navInactive: 'text-gray-600 hover:text-gray-900 hover:bg-gray-100',
       childActive: 'text-slate-900 bg-slate-100',
-      childInactive: 'text-gray-500 hover:text-gray-700',
+      childInactive: 'text-gray-500 hover:text-gray-700 hover:bg-gray-50',
       clientBg: 'bg-gray-50 border-gray-200',
       clientLabel: 'text-gray-500',
       avatarBg: 'bg-gray-200 text-gray-600',
       email: 'text-gray-500',
+      badge: 'bg-red-500 text-white',
     }
   };
 
@@ -134,6 +283,17 @@ export default function DynamicSidebar({
   const userName = user?.name || 'User';
   const userEmail = user?.email || 'user@signflow.com';
   const userInitials = getUserInitials(userName);
+
+  // Get workflow role display
+  const getWorkflowRoles = () => {
+    const roles = [];
+    const perms = user?.workflowPermissions || {};
+    if (perms.canCreate) roles.push('Creator');
+    if (perms.canApprove) roles.push('Approver');
+    if (perms.canSend) roles.push('Sender');
+    if (perms.canSign) roles.push('Signer');
+    return roles.join(' • ') || user?.designation || '';
+  };
 
   return (
     <div
@@ -208,20 +368,77 @@ export default function DynamicSidebar({
       {/* Navigation Items */}
       <nav className="flex-1 overflow-y-auto px-2 overscroll-contain">
         {isClientMode ? (
-          // Client Navigation
+          // Client Navigation - Dynamic based on permissions
           clientNavItems.map((item) => (
-            <Link
-              key={item.id}
-              to={createPageUrl(item.href)}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors mb-0.5",
-                currentPage === item.href ? themeStyles.navActive : themeStyles.navInactive
+            <div key={item.id}>
+              {item.children ? (
+                // Expandable menu
+                <>
+                  <button
+                    onClick={() => toggleExpand(item.id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors mb-0.5",
+                      themeStyles.navInactive
+                    )}
+                    style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
+                  >
+                    <item.icon className="w-4 h-4 flex-shrink-0" />
+                    <span className={cn("flex-1", isRTL ? "text-right" : "text-left")}>
+                      {item.labelKey ? t(item.labelKey) : item.label}
+                    </span>
+                    {expandedItems.includes(item.id)
+                      ? <ChevronDown className="w-4 h-4" />
+                      : <ChevronRight className={cn("w-4 h-4", isRTL && "rotate-180")} />
+                    }
+                  </button>
+
+                  {expandedItems.includes(item.id) && (
+                    <div className={cn("mt-1 space-y-0.5 mb-2", isRTL ? "mr-4" : "ml-4")}>
+                      {item.children.map((child) => {
+                        // Build URL with query params
+                        let url = createPageUrl(child.href);
+                        if (child.params) {
+                          const params = new URLSearchParams(child.params).toString();
+                          url = `${url}?${params}`;
+                        }
+                        return (
+                          <Link
+                            key={child.id}
+                            to={url}
+                            className={cn(
+                              "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors",
+                              isRTL ? "text-right flex-row-reverse" : "text-left",
+                              currentPage === child.href ? themeStyles.childActive : themeStyles.childInactive
+                            )}
+                          >
+                            {child.icon && <child.icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                            <span className="flex-1">{child.label}</span>
+                            {child.badge && (
+                              <span className={cn("w-2 h-2 rounded-full", themeStyles.badge)} />
+                            )}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              ) : (
+                // Regular nav item
+                <Link
+                  to={createPageUrl(item.href)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors mb-0.5",
+                    currentPage === item.href ? themeStyles.navActive : themeStyles.navInactive
+                  )}
+                  style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
+                >
+                  <item.icon className="w-4 h-4 flex-shrink-0" />
+                  <span className={cn("flex-1", isRTL ? "text-right" : "text-left")}>
+                    {item.labelKey ? t(item.labelKey) : item.label}
+                  </span>
+                </Link>
               )}
-              style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
-            >
-              <item.icon className="w-4 h-4 flex-shrink-0" />
-              <span className={cn("flex-1", isRTL ? "text-right" : "text-left")}>{t(item.labelKey)}</span>
-            </Link>
+            </div>
           ))
         ) : (
           // Platform Navigation (Super Admin/ICP)
@@ -349,7 +566,9 @@ export default function DynamicSidebar({
             </div>
             <div className={cn("flex-1 min-w-0", isRTL && "text-right")}>
               <p className="text-sm font-medium truncate">{userName}</p>
-              <p className={cn("text-xs truncate", themeStyles.email)}>{userEmail}</p>
+              <p className={cn("text-[10px] truncate", themeStyles.email)}>
+                {getWorkflowRoles()}
+              </p>
             </div>
           </div>
 

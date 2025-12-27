@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
@@ -27,6 +27,14 @@ import {
   CheckSquare,
   Hash,
   Phone,
+  Upload,
+  FileSpreadsheet,
+  Download,
+  AlertCircle,
+  X,
+  Check,
+  Loader2,
+  Table,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +44,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { SIGNER_TYPES } from '@/components/templates/SignerCard';
 import { FIELD_TYPES } from '@/components/templates/FieldOverlay';
+import { Progress } from '@/components/ui/progress';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -46,10 +55,76 @@ const steps = [
   { id: 'review', title: 'Review & Create', description: 'Confirm and create' },
 ];
 
+const bulkSteps = [
+  { id: 'blueprint', title: 'Select Blueprint', description: 'Choose a template' },
+  { id: 'upload', title: 'Upload CSV', description: 'Upload contract data' },
+  { id: 'review', title: 'Review & Create', description: 'Confirm and create' },
+];
+
+// Parse CSV string to array of objects
+function parseCSV(csvText) {
+  const lines = csvText.split('\n').filter(line => line.trim());
+  if (lines.length < 2) return { headers: [], rows: [] };
+
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  const rows = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] || '';
+    });
+    rows.push(row);
+  }
+
+  return { headers, rows };
+}
+
+// Generate CSV template based on blueprint
+function generateCSVTemplate(blueprint) {
+  const headers = ['contract_name', 'reference', 'notes'];
+
+  // Add signer columns
+  (blueprint.parties || []).forEach((party, idx) => {
+    headers.push(`signer_${idx + 1}_name`);
+    headers.push(`signer_${idx + 1}_email`);
+  });
+
+  // Add field columns (excluding signature/initials)
+  (blueprint.fields || []).forEach((field) => {
+    if (field.type !== 'signature' && field.type !== 'initials') {
+      const label = field.label || field.placeholder || `field_${field.id}`;
+      headers.push(label.toLowerCase().replace(/\s+/g, '_'));
+    }
+  });
+
+  // Create sample row
+  const sampleRow = ['Sample Contract', 'CON-001', 'Optional notes'];
+  (blueprint.parties || []).forEach((party) => {
+    sampleRow.push(`${party.name}`);
+    sampleRow.push(`${party.name.toLowerCase().replace(/\s+/g, '.')}@example.com`);
+  });
+  (blueprint.fields || []).forEach((field) => {
+    if (field.type !== 'signature' && field.type !== 'initials') {
+      if (field.type === 'date') sampleRow.push('2024-01-15');
+      else if (field.type === 'number') sampleRow.push('100');
+      else if (field.type === 'checkbox') sampleRow.push('true');
+      else sampleRow.push('Sample value');
+    }
+  });
+
+  return headers.join(',') + '\n' + sampleRow.join(',');
+}
+
 export default function ContractCreate() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const preselectedBlueprintId = searchParams.get('blueprintId');
+  const fileInputRef = useRef(null);
+
+  // Mode: 'single' or 'bulk'
+  const [mode, setMode] = useState('single');
 
   const [currentStep, setCurrentStep] = useState(0);
   const [blueprints, setBlueprints] = useState([]);
@@ -58,30 +133,36 @@ export default function ContractCreate() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Single contract data
   const [contractData, setContractData] = useState({
     name: '',
     reference: '',
     notes: '',
     signerEmails: {},
     signerNames: {},
-    fieldValues: {}, // Store values for all blueprint fields
-    createdBy: 'Current User', // In real app, get from auth
+    fieldValues: {},
+    createdBy: 'Current User',
   });
   const [reviewNumPages, setReviewNumPages] = useState(null);
+
+  // Bulk upload data
+  const [csvData, setCsvData] = useState({ headers: [], rows: [] });
+  const [csvFile, setCsvFile] = useState(null);
+  const [csvErrors, setCsvErrors] = useState([]);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, status: 'idle' });
+  const [bulkResults, setBulkResults] = useState([]);
 
   // Load blueprints
   useEffect(() => {
     const loadBlueprints = async () => {
       setIsLoading(true);
       try {
-        // Get blueprints from API
         const allTemplates = await getTemplates();
         const activeBlueprints = allTemplates.filter(t => t.status === 'active');
 
         setBlueprints(activeBlueprints);
-        setSampleBlueprints([]); // No longer using sample blueprints
+        setSampleBlueprints([]);
 
-        // If preselected blueprint ID, find and select it
         if (preselectedBlueprintId) {
           const blueprint = activeBlueprints.find(b =>
             b.id.toString() === preselectedBlueprintId ||
@@ -94,9 +175,7 @@ export default function ContractCreate() {
               name: `${blueprint.name} - New Contract`,
               reference: `CON-${Date.now().toString().slice(-6)}`,
             }));
-            setCurrentStep(1); // Skip to signer details
-          } else {
-            console.warn('Blueprint not found for ID:', preselectedBlueprintId);
+            setCurrentStep(1);
           }
         }
       } catch (error) {
@@ -109,10 +188,8 @@ export default function ContractCreate() {
     loadBlueprints();
   }, [preselectedBlueprintId]);
 
-  // All blueprints combined
   const allBlueprints = [...blueprints, ...sampleBlueprints];
 
-  // Filter blueprints by search
   const filteredBlueprints = allBlueprints.filter(blueprint =>
     blueprint.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     blueprint.description?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -128,6 +205,11 @@ export default function ContractCreate() {
       signerNames: {},
       fieldValues: {},
     }));
+    // Reset bulk data when changing blueprint
+    setCsvData({ headers: [], rows: [] });
+    setCsvFile(null);
+    setCsvErrors([]);
+    setBulkResults([]);
   };
 
   const handleSignerChange = (signerId, field, value) => {
@@ -150,14 +232,12 @@ export default function ContractCreate() {
     }));
   };
 
-  // Get fields grouped by signer
   const getFieldsBySigner = (signerId) => {
     return (selectedBlueprint?.fields || []).filter(
       field => field.role?.toString() === signerId?.toString()
     );
   };
 
-  // Render appropriate input for field type
   const renderFieldInput = (field) => {
     const fieldType = FIELD_TYPES[field.type];
     const value = contractData.fieldValues[field.id] || '';
@@ -165,7 +245,6 @@ export default function ContractCreate() {
     switch (field.type) {
       case 'signature':
       case 'initials':
-        // Signature/initials will be collected during signing, just show info
         return (
           <div className="flex items-center gap-2 text-slate-500 text-sm py-2 px-3 bg-slate-50 rounded-lg">
             <Pen className="w-4 h-4" />
@@ -258,7 +337,6 @@ export default function ContractCreate() {
       return;
     }
 
-    // Validate signer details
     const missingSigners = (selectedBlueprint.parties || []).filter(party => {
       const name = contractData.signerNames[party.id];
       const email = contractData.signerEmails[party.id];
@@ -272,7 +350,6 @@ export default function ContractCreate() {
       return;
     }
 
-    // Validate required fields (excluding signature/initials which are collected during signing)
     const missingFields = (selectedBlueprint.fields || []).filter(field => {
       if (field.type === 'signature' || field.type === 'initials') return false;
       if (!field.required) return false;
@@ -295,7 +372,6 @@ export default function ContractCreate() {
         description: `Contract "${contract.name}" is ready.`,
       });
 
-      // Navigate to contract detail
       setTimeout(() => {
         navigate(createPageUrl(`ContractDetail?id=${contract.id}`));
       }, 500);
@@ -309,80 +385,516 @@ export default function ContractCreate() {
     }
   };
 
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 0:
-        return (
-          <div className="max-w-5xl mx-auto">
-            {/* Search */}
-            <div className="relative mb-6">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <Input
-                placeholder="Search blueprints..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+  // Download CSV template
+  const handleDownloadTemplate = () => {
+    if (!selectedBlueprint) {
+      toast.error('Please select a blueprint first');
+      return;
+    }
+
+    const csvContent = generateCSVTemplate(selectedBlueprint);
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedBlueprint.name.replace(/\s+/g, '_')}_template.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast.success('Template downloaded!', {
+      description: 'Fill in the data and upload the CSV.',
+    });
+  };
+
+  // Handle CSV file upload
+  const handleFileUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      toast.error('Please upload a CSV file');
+      return;
+    }
+
+    setCsvFile(file);
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const text = e.target?.result;
+      if (typeof text === 'string') {
+        const parsed = parseCSV(text);
+        setCsvData(parsed);
+        validateCSVData(parsed);
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
+  // Validate CSV data against blueprint
+  const validateCSVData = (data) => {
+    const errors = [];
+    const parties = selectedBlueprint?.parties || [];
+
+    data.rows.forEach((row, rowIndex) => {
+      // Check required fields
+      if (!row.contract_name?.trim()) {
+        errors.push({ row: rowIndex + 1, field: 'contract_name', message: 'Contract name is required' });
+      }
+
+      // Check signer fields
+      parties.forEach((party, partyIdx) => {
+        const nameKey = `signer_${partyIdx + 1}_name`;
+        const emailKey = `signer_${partyIdx + 1}_email`;
+
+        if (!row[nameKey]?.trim()) {
+          errors.push({ row: rowIndex + 1, field: nameKey, message: `Signer ${partyIdx + 1} name is required` });
+        }
+        if (!row[emailKey]?.trim()) {
+          errors.push({ row: rowIndex + 1, field: emailKey, message: `Signer ${partyIdx + 1} email is required` });
+        }
+      });
+    });
+
+    setCsvErrors(errors);
+    return errors.length === 0;
+  };
+
+  // Build contract data from CSV row
+  const buildContractFromRow = (row, rowIndex) => {
+    const parties = selectedBlueprint?.parties || [];
+    const fields = selectedBlueprint?.fields || [];
+
+    const signerNames = {};
+    const signerEmails = {};
+    const fieldValues = {};
+
+    // Map signer data
+    parties.forEach((party, partyIdx) => {
+      signerNames[party.id] = row[`signer_${partyIdx + 1}_name`] || '';
+      signerEmails[party.id] = row[`signer_${partyIdx + 1}_email`] || '';
+    });
+
+    // Map field values
+    fields.forEach((field) => {
+      if (field.type !== 'signature' && field.type !== 'initials') {
+        const label = field.label || field.placeholder || `field_${field.id}`;
+        const key = label.toLowerCase().replace(/\s+/g, '_');
+        let value = row[key] || '';
+
+        // Convert checkbox values
+        if (field.type === 'checkbox') {
+          value = value.toLowerCase() === 'true' || value === '1';
+        }
+
+        fieldValues[field.id] = value;
+      }
+    });
+
+    return {
+      name: row.contract_name || `${selectedBlueprint.name} - Contract ${rowIndex + 1}`,
+      reference: row.reference || `CON-${Date.now().toString().slice(-6)}-${rowIndex + 1}`,
+      notes: row.notes || '',
+      signerNames,
+      signerEmails,
+      fieldValues,
+      createdBy: 'Bulk Upload',
+    };
+  };
+
+  // Handle bulk contract creation
+  const handleBulkCreate = async () => {
+    if (csvData.rows.length === 0) {
+      toast.error('No data to process');
+      return;
+    }
+
+    if (csvErrors.length > 0) {
+      toast.error('Please fix validation errors first');
+      return;
+    }
+
+    setBulkProgress({ current: 0, total: csvData.rows.length, status: 'processing' });
+    setBulkResults([]);
+
+    const results = [];
+
+    for (let i = 0; i < csvData.rows.length; i++) {
+      const row = csvData.rows[i];
+      const contractData = buildContractFromRow(row, i);
+
+      try {
+        const contract = await createContractFromBlueprint(selectedBlueprint, contractData);
+        results.push({ row: i + 1, success: true, contract, name: contractData.name });
+      } catch (error) {
+        results.push({ row: i + 1, success: false, error: error.message, name: contractData.name });
+      }
+
+      setBulkProgress(prev => ({ ...prev, current: i + 1 }));
+    }
+
+    setBulkResults(results);
+    setBulkProgress(prev => ({ ...prev, status: 'completed' }));
+
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
+
+    if (failCount === 0) {
+      toast.success(`Successfully created ${successCount} contracts!`);
+    } else {
+      toast.warning(`Created ${successCount} contracts, ${failCount} failed`);
+    }
+  };
+
+  const activeSteps = mode === 'bulk' ? bulkSteps : steps;
+
+  const renderBlueprintSelector = () => (
+    <div className="max-w-5xl mx-auto">
+      {/* Mode Toggle */}
+      <div className="flex items-center justify-center gap-4 mb-6">
+        <div className="bg-slate-100 p-1 rounded-lg flex">
+          <button
+            onClick={() => { setMode('single'); setCurrentStep(0); }}
+            className={cn(
+              'px-4 py-2 rounded-md text-sm font-medium transition-all',
+              mode === 'single'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            )}
+          >
+            <User className="w-4 h-4 inline-block mr-2" />
+            Single Contract
+          </button>
+          <button
+            onClick={() => { setMode('bulk'); setCurrentStep(0); }}
+            className={cn(
+              'px-4 py-2 rounded-md text-sm font-medium transition-all',
+              mode === 'bulk'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            )}
+          >
+            <Table className="w-4 h-4 inline-block mr-2" />
+            Bulk Upload (CSV)
+          </button>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+        <Input
+          placeholder="Search blueprints..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {/* Blueprint Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredBlueprints.map((blueprint) => {
+          const isSelected = selectedBlueprint?.id === blueprint.id;
+          return (
+            <div
+              key={blueprint.id}
+              onClick={() => handleSelectBlueprint(blueprint)}
+              className={cn(
+                'p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md',
+                isSelected
+                  ? 'border-slate-900 bg-slate-50'
+                  : 'border-slate-200 hover:border-slate-300'
+              )}
+            >
+              {/* Preview */}
+              <div className="h-32 bg-slate-100 rounded-lg mb-3 overflow-hidden flex items-center justify-center">
+                {blueprint.thumbnailUrl || blueprint.preview || blueprint.filePreview ? (
+                  <img
+                    src={blueprint.thumbnailUrl ? getDocumentUrl(blueprint.thumbnailUrl) : (blueprint.preview || blueprint.filePreview)}
+                    alt={blueprint.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <FileText className="w-12 h-12 text-slate-300" />
+                )}
+              </div>
+
+              {/* Info */}
+              <h3 className="font-medium text-slate-900 mb-1 truncate">{blueprint.name}</h3>
+              <p className="text-xs text-slate-500 line-clamp-2">{blueprint.description}</p>
+
+              {/* Signers count */}
+              <div className="flex items-center gap-2 mt-3 text-xs text-slate-500">
+                <Users className="w-3.5 h-3.5" />
+                <span>{blueprint.parties?.length || 0} signers</span>
+              </div>
+
+              {isSelected && (
+                <div className="flex items-center gap-1 mt-3 text-xs text-slate-900 font-medium">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Selected
+                </div>
+              )}
             </div>
+          );
+        })}
+      </div>
 
-            {/* Blueprint Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredBlueprints.map((blueprint) => {
-                const isSelected = selectedBlueprint?.id === blueprint.id;
-                return (
-                  <div
-                    key={blueprint.id}
-                    onClick={() => handleSelectBlueprint(blueprint)}
-                    className={cn(
-                      'p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md',
-                      isSelected
-                        ? 'border-slate-900 bg-slate-50'
-                        : 'border-slate-200 hover:border-slate-300'
-                    )}
-                  >
-                    {/* Preview */}
-                    <div className="h-32 bg-slate-100 rounded-lg mb-3 overflow-hidden flex items-center justify-center">
-                      {blueprint.thumbnailUrl || blueprint.preview || blueprint.filePreview ? (
-                        <img
-                          src={blueprint.thumbnailUrl ? getDocumentUrl(blueprint.thumbnailUrl) : (blueprint.preview || blueprint.filePreview)}
-                          alt={blueprint.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <FileText className="w-12 h-12 text-slate-300" />
-                      )}
-                    </div>
+      {filteredBlueprints.length === 0 && (
+        <div className="text-center py-12">
+          <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-500">No blueprints found</p>
+        </div>
+      )}
+    </div>
+  );
 
-                    {/* Info */}
-                    <h3 className="font-medium text-slate-900 mb-1 truncate">{blueprint.name}</h3>
-                    <p className="text-xs text-slate-500 line-clamp-2">{blueprint.description}</p>
+  const renderBulkUploadStep = () => (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Template Download */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-slate-100 rounded-lg">
+            <FileSpreadsheet className="w-6 h-6 text-slate-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-slate-900">Download CSV Template</h3>
+            <p className="text-sm text-slate-500 mt-1">
+              Download a pre-formatted template for "{selectedBlueprint?.name}" with all required columns.
+            </p>
+          </div>
+          <Button onClick={handleDownloadTemplate} variant="outline" className="gap-2">
+            <Download className="w-4 h-4" />
+            Download Template
+          </Button>
+        </div>
+      </div>
 
-                    {/* Signers count */}
-                    <div className="flex items-center gap-2 mt-3 text-xs text-slate-500">
-                      <Users className="w-3.5 h-3.5" />
-                      <span>{blueprint.parties?.length || 0} signers</span>
-                    </div>
+      {/* File Upload */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <h3 className="font-semibold text-slate-900 mb-4">Upload CSV File</h3>
 
-                    {isSelected && (
-                      <div className="flex items-center gap-1 mt-3 text-xs text-slate-900 font-medium">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Selected
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          className={cn(
+            'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors',
+            csvFile ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 hover:border-slate-400'
+          )}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+
+          {csvFile ? (
+            <div className="space-y-2">
+              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
+                <Check className="w-6 h-6 text-emerald-600" />
+              </div>
+              <p className="text-sm font-medium text-slate-900">{csvFile.name}</p>
+              <p className="text-xs text-slate-500">{csvData.rows.length} contracts to create</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCsvFile(null);
+                  setCsvData({ headers: [], rows: [] });
+                  setCsvErrors([]);
+                }}
+                className="text-slate-500"
+              >
+                <X className="w-4 h-4 mr-1" />
+                Remove
+              </Button>
             </div>
+          ) : (
+            <div className="space-y-2">
+              <Upload className="w-10 h-10 text-slate-400 mx-auto" />
+              <p className="text-sm text-slate-600">Click to upload or drag and drop</p>
+              <p className="text-xs text-slate-400">CSV files only</p>
+            </div>
+          )}
+        </div>
+      </div>
 
-            {filteredBlueprints.length === 0 && (
-              <div className="text-center py-12">
-                <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500">No blueprints found</p>
+      {/* Validation Errors */}
+      {csvErrors.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <h4 className="font-medium text-red-900">Validation Errors ({csvErrors.length})</h4>
+          </div>
+          <div className="max-h-40 overflow-y-auto space-y-1">
+            {csvErrors.slice(0, 10).map((error, idx) => (
+              <p key={idx} className="text-sm text-red-700">
+                Row {error.row}: {error.message}
+              </p>
+            ))}
+            {csvErrors.length > 10 && (
+              <p className="text-sm text-red-500 font-medium">...and {csvErrors.length - 10} more errors</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Data Preview */}
+      {csvData.rows.length > 0 && csvErrors.length === 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+            <h3 className="font-semibold text-slate-900">Preview</h3>
+            <span className="text-sm text-slate-500">{csvData.rows.length} contracts</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">#</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">Contract Name</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">Reference</th>
+                  {(selectedBlueprint?.parties || []).map((party, idx) => (
+                    <th key={idx} className="px-4 py-2 text-left text-xs font-medium text-slate-500">
+                      Signer {idx + 1}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {csvData.rows.slice(0, 5).map((row, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="px-4 py-2 text-slate-500">{idx + 1}</td>
+                    <td className="px-4 py-2 text-slate-900">{row.contract_name}</td>
+                    <td className="px-4 py-2 text-slate-500">{row.reference || '-'}</td>
+                    {(selectedBlueprint?.parties || []).map((party, partyIdx) => (
+                      <td key={partyIdx} className="px-4 py-2">
+                        <div>
+                          <p className="text-slate-900">{row[`signer_${partyIdx + 1}_name`]}</p>
+                          <p className="text-xs text-slate-500">{row[`signer_${partyIdx + 1}_email`]}</p>
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {csvData.rows.length > 5 && (
+              <div className="px-4 py-2 text-center text-sm text-slate-500 border-t border-slate-100">
+                ...and {csvData.rows.length - 5} more rows
               </div>
             )}
           </div>
-        );
+        </div>
+      )}
+    </div>
+  );
 
+  const renderBulkReviewStep = () => (
+    <div className="max-w-3xl mx-auto space-y-6">
+      {/* Summary */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <h3 className="font-semibold text-slate-900 mb-4">Bulk Creation Summary</h3>
+
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="text-center p-4 bg-slate-50 rounded-lg">
+            <p className="text-2xl font-bold text-slate-900">{csvData.rows.length}</p>
+            <p className="text-sm text-slate-500">Total Contracts</p>
+          </div>
+          <div className="text-center p-4 bg-slate-50 rounded-lg">
+            <p className="text-2xl font-bold text-slate-900">{selectedBlueprint?.parties?.length || 0}</p>
+            <p className="text-sm text-slate-500">Signers Each</p>
+          </div>
+          <div className="text-center p-4 bg-slate-50 rounded-lg">
+            <p className="text-2xl font-bold text-slate-900">{selectedBlueprint?.name}</p>
+            <p className="text-sm text-slate-500">Blueprint</p>
+          </div>
+        </div>
+
+        {bulkProgress.status === 'processing' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-600">Creating contracts...</span>
+              <span className="text-slate-900 font-medium">
+                {bulkProgress.current} / {bulkProgress.total}
+              </span>
+            </div>
+            <Progress value={(bulkProgress.current / bulkProgress.total) * 100} className="h-2" />
+          </div>
+        )}
+
+        {bulkProgress.status === 'completed' && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              <span className="text-sm font-medium text-emerald-900">
+                Bulk creation completed!
+              </span>
+            </div>
+
+            {/* Results */}
+            <div className="max-h-60 overflow-y-auto space-y-2">
+              {bulkResults.map((result, idx) => (
+                <div
+                  key={idx}
+                  className={cn(
+                    'flex items-center justify-between p-3 rounded-lg border',
+                    result.success
+                      ? 'bg-emerald-50 border-emerald-200'
+                      : 'bg-red-50 border-red-200'
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    {result.success ? (
+                      <Check className="w-4 h-4 text-emerald-600" />
+                    ) : (
+                      <X className="w-4 h-4 text-red-600" />
+                    )}
+                    <span className="text-sm">{result.name}</span>
+                  </div>
+                  {result.success ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(createPageUrl(`ContractDetail?id=${result.contract.id}`))}
+                      className="text-emerald-700"
+                    >
+                      View
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-red-600">{result.error}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <Button
+              onClick={() => navigate(createPageUrl('Current'))}
+              className="w-full bg-slate-900 hover:bg-slate-800"
+            >
+              Go to Contracts
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderStepContent = () => {
+    if (currentStep === 0) {
+      return renderBlueprintSelector();
+    }
+
+    if (mode === 'bulk') {
+      if (currentStep === 1) return renderBulkUploadStep();
+      if (currentStep === 2) return renderBulkReviewStep();
+    }
+
+    // Single contract flow
+    switch (currentStep) {
       case 1:
         return (
           <div className="max-w-3xl mx-auto">
@@ -544,14 +1056,6 @@ export default function ContractCreate() {
           return value || '';
         };
 
-        // Get signer info for a field
-        const getSignerForField = (field) => {
-          const party = selectedBlueprint?.parties?.find(p => p.id?.toString() === field.role?.toString());
-          if (!party) return null;
-          const signerType = SIGNER_TYPES[party.signerType] || SIGNER_TYPES.external;
-          return { party, signerType };
-        };
-
         return (
           <div className="h-full flex gap-6">
             {/* Document Preview with Field Values */}
@@ -561,225 +1065,187 @@ export default function ContractCreate() {
                 <span className="text-xs text-slate-500">{selectedBlueprint?.fields?.length || 0} fields</span>
               </div>
               <div className="flex-1 p-4 bg-slate-100 overflow-y-auto">
-                  {(selectedBlueprint?.documentUrl || selectedBlueprint?.documentData?.data) ? (
-                    (selectedBlueprint.documentType === 'application/pdf' || selectedBlueprint?.documentData?.type === 'application/pdf') ? (
-                      <Document
-                        file={selectedBlueprint.documentUrl ? getDocumentUrl(selectedBlueprint.documentUrl) : selectedBlueprint.documentData.data}
-                        onLoadSuccess={({ numPages }) => setReviewNumPages(numPages)}
-                        onLoadError={(error) => console.error('PDF load error:', error)}
-                        loading={<div className="text-center py-8 text-slate-500">Loading PDF...</div>}
-                      >
-                        {Array.from(new Array(reviewNumPages || 1), (_, index) => (
-                          <div key={index} className="relative mb-4 mx-auto" style={{ width: 550 }}>
-                            <Page
-                              pageNumber={index + 1}
-                              width={550}
-                              renderTextLayer={false}
-                              renderAnnotationLayer={false}
-                              className="shadow-lg rounded-lg"
-                            />
-                            {/* Field Values as Plain Text */}
-                            {(selectedBlueprint?.fields || [])
-                              .filter(f => (f.page || 1) === index + 1)
-                              .map((field) => {
-                                const displayValue = getFieldDisplayValue(field);
-                                const isSignature = field.type === 'signature' || field.type === 'initials';
-                                const fieldLabel = field.label || field.placeholder || FIELD_TYPES[field.type]?.label || field.type;
-                                const hasValue = displayValue && displayValue !== '';
+                {(selectedBlueprint?.documentUrl || selectedBlueprint?.documentData?.data) ? (
+                  (selectedBlueprint.documentType === 'application/pdf' || selectedBlueprint?.documentData?.type === 'application/pdf') ? (
+                    <Document
+                      file={selectedBlueprint.documentUrl ? getDocumentUrl(selectedBlueprint.documentUrl) : selectedBlueprint.documentData.data}
+                      onLoadSuccess={({ numPages }) => setReviewNumPages(numPages)}
+                      onLoadError={(error) => console.error('PDF load error:', error)}
+                      loading={<div className="text-center py-8 text-slate-500">Loading PDF...</div>}
+                    >
+                      {Array.from(new Array(reviewNumPages || 1), (_, index) => (
+                        <div key={index} className="relative mb-4 mx-auto" style={{ width: 550 }}>
+                          <Page
+                            pageNumber={index + 1}
+                            width={550}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                            className="shadow-lg rounded-lg"
+                          />
+                          {/* Field Values as Plain Text */}
+                          {(selectedBlueprint?.fields || [])
+                            .filter(f => (f.page || 1) === index + 1)
+                            .map((field) => {
+                              const displayValue = getFieldDisplayValue(field);
+                              const isSignature = field.type === 'signature' || field.type === 'initials';
+                              const fieldLabel = field.label || field.placeholder || FIELD_TYPES[field.type]?.label || field.type;
+                              const hasValue = displayValue && displayValue !== '';
 
-                                return (
-                                  <div
-                                    key={field.id}
-                                    className="absolute flex items-center"
-                                    style={{
-                                      left: `${(field.x / 595) * 100}%`,
-                                      top: `${(field.y / 842) * 100}%`,
-                                    }}
-                                  >
-                                    <span className={cn(
-                                      'text-xs whitespace-nowrap',
-                                      hasValue
-                                        ? isSignature ? 'italic text-slate-600' : 'text-slate-900'
-                                        : 'text-slate-400'
-                                    )}>
-                                      {hasValue ? displayValue : fieldLabel}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                          </div>
-                        ))}
-                      </Document>
-                    ) : (
-                      <div className="relative mx-auto" style={{ width: 550 }}>
-                        <img
-                          src={selectedBlueprint.documentUrl ? getDocumentUrl(selectedBlueprint.documentUrl) : selectedBlueprint.documentData?.data}
-                          alt="Document"
-                          className="w-full rounded-lg shadow-lg"
-                        />
-                        {/* Field Values as Plain Text for Image */}
-                        {(selectedBlueprint?.fields || []).map((field) => {
-                          const displayValue = getFieldDisplayValue(field);
-                          const isSignature = field.type === 'signature' || field.type === 'initials';
-                          const fieldLabel = field.label || field.placeholder || FIELD_TYPES[field.type]?.label || field.type;
-                          const hasValue = displayValue && displayValue !== '';
-
-                          return (
-                            <div
-                              key={field.id}
-                              className="absolute flex items-center"
-                              style={{
-                                left: `${(field.x / 595) * 100}%`,
-                                top: `${(field.y / 842) * 100}%`,
-                              }}
-                            >
-                              <span className={cn(
-                                'text-xs whitespace-nowrap',
-                                hasValue
-                                  ? isSignature ? 'italic text-slate-600' : 'text-slate-900'
-                                  : 'text-slate-400'
-                              )}>
-                                {hasValue ? displayValue : fieldLabel}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )
+                              return (
+                                <div
+                                  key={field.id}
+                                  className="absolute flex items-center"
+                                  style={{
+                                    left: `${(field.x / 595) * 100}%`,
+                                    top: `${(field.y / 842) * 100}%`,
+                                  }}
+                                >
+                                  <span className={cn(
+                                    'text-xs whitespace-nowrap',
+                                    hasValue
+                                      ? isSignature ? 'italic text-slate-600' : 'text-slate-900'
+                                      : 'text-slate-400'
+                                  )}>
+                                    {hasValue ? displayValue : fieldLabel}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      ))}
+                    </Document>
                   ) : (
-                    <div className="text-center py-12">
-                      <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                      <p className="text-slate-500">No preview available</p>
+                    <div className="relative mx-auto" style={{ width: 550 }}>
+                      <img
+                        src={selectedBlueprint.documentUrl ? getDocumentUrl(selectedBlueprint.documentUrl) : selectedBlueprint.documentData?.data}
+                        alt="Document"
+                        className="w-full rounded-lg shadow-lg"
+                      />
                     </div>
-                  )}
+                  )
+                ) : (
+                  <div className="text-center py-12">
+                    <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-500">No preview available</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Contract Summary - Simplified */}
+            <div className="w-80 shrink-0 space-y-4 overflow-y-auto">
+              <div className="bg-white rounded-xl border border-slate-200 p-5">
+                <h3 className="font-semibold text-slate-900 mb-4">Contract Summary</h3>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-sm text-slate-500">Contract Name</span>
+                    <span className="text-sm font-medium text-slate-900 text-right max-w-[150px] truncate">{contractData.name}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-sm text-slate-500">Reference</span>
+                    <code className="text-xs bg-slate-100 px-2 py-1 rounded">{contractData.reference}</code>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-sm text-slate-500">Blueprint</span>
+                    <span className="text-sm font-medium text-slate-900">{selectedBlueprint?.name}</span>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <span className="text-sm text-slate-500">Total Signers</span>
+                    <span className="text-sm font-medium text-slate-900">
+                      {selectedBlueprint?.parties?.length || 0}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Contract Summary - Simplified */}
-            <div className="w-80 shrink-0 space-y-4 overflow-y-auto">
+              {/* Signers Summary */}
               <div className="bg-white rounded-xl border border-slate-200 p-5">
-                  <h3 className="font-semibold text-slate-900 mb-4">Contract Summary</h3>
+                <h3 className="font-semibold text-slate-900 mb-4">Signers</h3>
+                <div className="space-y-3">
+                  {(selectedBlueprint?.parties || []).map((party) => {
+                    const signerType = SIGNER_TYPES[party.signerType] || SIGNER_TYPES.external;
+                    const SignerIcon = signerType.icon;
+                    const name = contractData.signerNames[party.id] || party.name;
+                    const email = contractData.signerEmails[party.id] || 'Not provided';
+                    const signerFields = getFieldsBySigner(party.id);
 
-                  <div className="space-y-3">
-                    <div className="flex justify-between py-2 border-b border-slate-100">
-                      <span className="text-sm text-slate-500">Contract Name</span>
-                      <span className="text-sm font-medium text-slate-900 text-right max-w-[150px] truncate">{contractData.name}</span>
+                    return (
+                      <div key={party.id} className={cn(
+                        'p-3 rounded-lg border',
+                        signerType.borderColor,
+                        signerType.bgColor
+                      )}>
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            'w-8 h-8 rounded-full flex items-center justify-center bg-white'
+                          )}>
+                            <SignerIcon className={cn('w-4 h-4', signerType.color)} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-slate-900 truncate">{name}</p>
+                            <p className="text-xs text-slate-500 truncate">{email}</p>
+                          </div>
+                          <span className="text-[10px] bg-white/80 px-1.5 py-0.5 rounded text-slate-500 shrink-0">
+                            {signerFields.length} fields
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Workflow Info */}
+              {selectedBlueprint?.settings && (
+                <div className="bg-white rounded-xl border border-slate-200 p-5">
+                  <h4 className="font-semibold text-slate-900 mb-4">Workflow</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500">Approval</span>
+                      <span className="text-slate-700">
+                        {selectedBlueprint.settings.approval?.enabled
+                          ? `${selectedBlueprint.settings.approval.requiredApprovers || 1} level(s)`
+                          : 'Not required'}
+                      </span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-slate-100">
-                      <span className="text-sm text-slate-500">Reference</span>
-                      <code className="text-xs bg-slate-100 px-2 py-1 rounded">{contractData.reference}</code>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500">Delivery</span>
+                      <span className="text-slate-700 capitalize">
+                        {selectedBlueprint.settings.delivery?.mode || 'Manual'}
+                      </span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-slate-100">
-                      <span className="text-sm text-slate-500">Blueprint</span>
-                      <span className="text-sm font-medium text-slate-900">{selectedBlueprint?.name}</span>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500">Signing Order</span>
+                      <span className="text-slate-700 capitalize">
+                        {selectedBlueprint.settings.signingOrder?.order || 'Sequential'}
+                      </span>
                     </div>
-                    <div className="flex justify-between py-2">
-                      <span className="text-sm text-slate-500">Total Signers</span>
-                      <span className="text-sm font-medium text-slate-900">
-                        {selectedBlueprint?.parties?.length || 0}
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500">Reminders</span>
+                      <span className="text-slate-700">
+                        {selectedBlueprint.settings.reminder?.enabled
+                          ? `Every ${selectedBlueprint.settings.reminder.reminderIntervalDays || 2} days`
+                          : 'Disabled'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500">Expiration</span>
+                      <span className="text-slate-700">
+                        {selectedBlueprint.settings.expiration?.enabled
+                          ? `${selectedBlueprint.settings.expiration.expiresAfterDays || 30} days`
+                          : 'No expiry'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1.5">
+                      <span className="text-slate-500">Revocation</span>
+                      <span className="text-slate-700">
+                        {selectedBlueprint.settings.revoke?.allowRevocation ? 'Allowed' : 'Not allowed'}
                       </span>
                     </div>
                   </div>
                 </div>
-
-                {/* Signers Summary */}
-                <div className="bg-white rounded-xl border border-slate-200 p-5">
-                  <h3 className="font-semibold text-slate-900 mb-4">Signers</h3>
-                  <div className="space-y-3">
-                    {(selectedBlueprint?.parties || []).map((party) => {
-                      const signerType = SIGNER_TYPES[party.signerType] || SIGNER_TYPES.external;
-                      const SignerIcon = signerType.icon;
-                      const name = contractData.signerNames[party.id] || party.name;
-                      const email = contractData.signerEmails[party.id] || 'Not provided';
-                      const signerFields = getFieldsBySigner(party.id);
-
-                      return (
-                        <div key={party.id} className={cn(
-                          'p-3 rounded-lg border',
-                          signerType.borderColor,
-                          signerType.bgColor
-                        )}>
-                          <div className="flex items-center gap-2">
-                            <div className={cn(
-                              'w-8 h-8 rounded-full flex items-center justify-center bg-white'
-                            )}>
-                              <SignerIcon className={cn('w-4 h-4', signerType.color)} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm text-slate-900 truncate">{name}</p>
-                              <p className="text-xs text-slate-500 truncate">{email}</p>
-                            </div>
-                            <span className="text-[10px] bg-white/80 px-1.5 py-0.5 rounded text-slate-500 shrink-0">
-                              {signerFields.length} fields
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Workflow Info */}
-                {selectedBlueprint?.settings && (
-                  <div className="bg-white rounded-xl border border-slate-200 p-5">
-                    <h4 className="font-semibold text-slate-900 mb-4">Workflow</h4>
-                    <div className="space-y-2 text-sm">
-                      {/* Approval */}
-                      <div className="flex justify-between py-1.5 border-b border-slate-100">
-                        <span className="text-slate-500">Approval</span>
-                        <span className="text-slate-700">
-                          {selectedBlueprint.settings.approval?.enabled
-                            ? `${selectedBlueprint.settings.approval.requiredApprovers || 1} level(s)`
-                            : 'Not required'}
-                        </span>
-                      </div>
-
-                      {/* Delivery */}
-                      <div className="flex justify-between py-1.5 border-b border-slate-100">
-                        <span className="text-slate-500">Delivery</span>
-                        <span className="text-slate-700 capitalize">
-                          {selectedBlueprint.settings.delivery?.mode || 'Manual'}
-                        </span>
-                      </div>
-
-                      {/* Signing Order */}
-                      <div className="flex justify-between py-1.5 border-b border-slate-100">
-                        <span className="text-slate-500">Signing Order</span>
-                        <span className="text-slate-700 capitalize">
-                          {selectedBlueprint.settings.signingOrder?.order || 'Sequential'}
-                        </span>
-                      </div>
-
-                      {/* Reminder */}
-                      <div className="flex justify-between py-1.5 border-b border-slate-100">
-                        <span className="text-slate-500">Reminders</span>
-                        <span className="text-slate-700">
-                          {selectedBlueprint.settings.reminder?.enabled
-                            ? `Every ${selectedBlueprint.settings.reminder.reminderIntervalDays || 2} days`
-                            : 'Disabled'}
-                        </span>
-                      </div>
-
-                      {/* Expiration */}
-                      <div className="flex justify-between py-1.5 border-b border-slate-100">
-                        <span className="text-slate-500">Expiration</span>
-                        <span className="text-slate-700">
-                          {selectedBlueprint.settings.expiration?.enabled
-                            ? `${selectedBlueprint.settings.expiration.expiresAfterDays || 30} days`
-                            : 'No expiry'}
-                        </span>
-                      </div>
-
-                      {/* Revoke */}
-                      <div className="flex justify-between py-1.5">
-                        <span className="text-slate-500">Revocation</span>
-                        <span className="text-slate-700">
-                          {selectedBlueprint.settings.revoke?.allowRevocation ? 'Allowed' : 'Not allowed'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+              )}
             </div>
           </div>
         );
@@ -808,20 +1274,22 @@ export default function ContractCreate() {
           <div className="flex items-center justify-between gap-8">
             {/* Left: Back button and Title */}
             <div className="flex items-center gap-4">
-              <Link to={createPageUrl('Contracts')}>
+              <Link to={createPageUrl('Current')}>
                 <Button variant="ghost" size="icon">
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
               </Link>
               <div>
-                <h1 className="font-semibold text-slate-900">Create Contract</h1>
-                <p className="text-sm text-slate-500">Step {currentStep + 1} of {steps.length}</p>
+                <h1 className="font-semibold text-slate-900">
+                  Create Contract{mode === 'bulk' && ' (Bulk)'}
+                </h1>
+                <p className="text-sm text-slate-500">Step {currentStep + 1} of {activeSteps.length}</p>
               </div>
             </div>
 
             {/* Center: Progress Stepper */}
             <div className="flex items-center gap-2 flex-1 justify-center">
-              {steps.map((step, index) => (
+              {activeSteps.map((step, index) => (
                 <React.Fragment key={step.id}>
                   <button
                     onClick={() => {
@@ -843,7 +1311,7 @@ export default function ContractCreate() {
                     <span className="text-xs font-medium">{index + 1}</span>
                     <span className="text-xs hidden md:inline">{step.title}</span>
                   </button>
-                  {index < steps.length - 1 && (
+                  {index < activeSteps.length - 1 && (
                     <div className={cn(
                       'h-0.5 w-8',
                       index < currentStep ? 'bg-slate-700' : 'bg-slate-200'
@@ -860,28 +1328,50 @@ export default function ContractCreate() {
                   Back
                 </Button>
               )}
-              {currentStep === steps.length - 1 ? (
-                <Button
-                  className="gap-2 bg-slate-900 hover:bg-slate-800"
-                  onClick={handleCreateContract}
-                  disabled={isCreating}
-                >
-                  {isCreating ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      Create Contract
-                    </>
-                  )}
-                </Button>
+              {currentStep === activeSteps.length - 1 ? (
+                mode === 'bulk' ? (
+                  bulkProgress.status !== 'completed' && (
+                    <Button
+                      className="gap-2 bg-slate-900 hover:bg-slate-800"
+                      onClick={handleBulkCreate}
+                      disabled={bulkProgress.status === 'processing' || csvData.rows.length === 0 || csvErrors.length > 0}
+                    >
+                      {bulkProgress.status === 'processing' ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          Create {csvData.rows.length} Contracts
+                        </>
+                      )}
+                    </Button>
+                  )
+                ) : (
+                  <Button
+                    className="gap-2 bg-slate-900 hover:bg-slate-800"
+                    onClick={handleCreateContract}
+                    disabled={isCreating}
+                  >
+                    {isCreating ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        Create Contract
+                      </>
+                    )}
+                  </Button>
+                )
               ) : (
                 <Button
                   className="bg-slate-900 hover:bg-slate-800"
-                  onClick={() => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1))}
+                  onClick={() => setCurrentStep(prev => Math.min(prev + 1, activeSteps.length - 1))}
                   disabled={currentStep === 0 && !selectedBlueprint}
                 >
                   Next Step

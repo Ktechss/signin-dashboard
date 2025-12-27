@@ -1,391 +1,653 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
+import { Document, Page, pdfjs } from 'react-pdf';
+import {
+  getContractById,
+  getDocumentUrl,
+  updateContract,
+} from '@/utils/templateStorage';
 import {
   ArrowLeft,
   FileText,
-  Bell,
-  Clock,
   Calendar,
-  Copy,
-  ExternalLink,
-  CheckCircle2,
-  Eye,
-  Key,
+  Clock,
   Users,
+  CheckCircle,
+  Eye,
+  MoreVertical,
+  Settings,
   Activity,
-  Shield,
-  ChevronDown
+  FormInput,
+  Download,
+  ExternalLink,
+  Mail,
+  Building2,
+  Bell,
+  XCircle,
+  ShieldCheck,
+  Workflow,
+  Copy,
+  ZoomIn,
+  ZoomOut,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ButtonGroup } from '@/components/ui/button-group';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import StatusBadge from '@/components/ui-custom/StatusBadge';
-import Timeline from '@/components/ui-custom/Timeline';
-import RecordViewerModal from '@/components/ui-custom/RecordViewerModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
-// Mock contract data
-const contract = {
-  id: 1,
-  name: 'Sales Agreement - Acme Corp',
-  reference: 'SA-2024-001',
-  status: 'in_progress',
-  template: 'Sales Agreement Template v2.1',
-  documentName: 'sales_agreement_acme.pdf',
-  createdBy: 'John Doe',
-  createdAt: 'January 15, 2024',
-  expiresAt: 'January 22, 2024',
-  signedCount: 2,
-  totalParties: 3,
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+// Status labels
+const statusLabels = {
+  draft: 'Draft',
+  pending_approval: 'Pending Approval',
+  approved: 'Approved',
+  pending_internal: 'Pending Internal',
+  internal_signed: 'Internal Signed',
+  pending_send: 'Ready to Send',
+  sent: 'Sent',
+  partially_signed: 'Partially Signed',
+  completed: 'Completed',
+  declined: 'Declined',
+  expired: 'Expired',
+  revoked: 'Revoked',
+  pending: 'Pending',
+  signed: 'Signed',
 };
 
-// Mock linked signing requests (separate from parties)
-const linkedSigningRequests = [
-  { token: 'TKN-8F2A-X9K1', status: 'authorised', date: 'Jan 16, 2024', device: 'Chrome on Windows' },
-  { token: 'TKN-3B7C-M4P2', status: 'authorised', date: 'Jan 17, 2024', device: 'Safari on Mac' },
-  { token: 'TKN-1A2B-C3D4', status: 'rejected', date: 'Jan 15, 2024', device: 'Firefox on Linux' },
-  { token: 'TKN-5D9E-Q6R3', status: 'pending', date: 'Jan 18, 2024', device: 'Chrome on Android' },
-];
+// Info Card Component
+function InfoCard({ icon: Icon, label, value }) {
+  return (
+    <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-slate-200">
+      <div className="p-2 rounded-lg bg-slate-100">
+        <Icon className="w-4 h-4 text-slate-600" />
+      </div>
+      <div>
+        <p className="text-xs text-slate-500">{label}</p>
+        <p className="text-sm font-medium text-slate-900">{value}</p>
+      </div>
+    </div>
+  );
+}
 
-const parties = [
-  {
-    id: 1,
-    name: 'John Smith',
-    email: 'john@acme.com',
-    role: 'Buyer',
-    status: 'signed',
-    signedAt: 'Jan 16, 2024 at 2:30 PM',
-    documentHash: 'a3f2b8c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9',
-    signatureHash: '7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e',
-    mailSentAt: 'Jan 15, 2024 at 9:05 AM',
-    mailOpenedAt: 'Jan 16, 2024 at 2:10 PM',
-    remindersSent: 0,
-    documentViewedAt: 'Jan 16, 2024 at 2:15 PM',
-    verificationMethod: 'Facial Recognition + ID',
-    verifiedAt: 'Jan 16, 2024 at 2:25 PM',
-  },
-  {
-    id: 2,
-    name: 'Jane Doe',
-    email: 'jane@company.com',
-    role: 'Seller',
-    status: 'signed',
-    signedAt: 'Jan 17, 2024 at 10:15 AM',
-    documentHash: 'a3f2b8c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9',
-    signatureHash: 'b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3',
-    mailSentAt: 'Jan 15, 2024 at 9:06 AM',
-    mailOpenedAt: 'Jan 17, 2024 at 9:45 AM',
-    remindersSent: 1,
-    documentViewedAt: 'Jan 17, 2024 at 9:50 AM',
-    verificationMethod: 'Email OTP + SMS',
-    verifiedAt: 'Jan 17, 2024 at 10:00 AM',
-  },
-  {
-    id: 3,
-    name: 'Bob Wilson',
-    email: 'bob@legal.com',
-    role: 'Witness',
-    status: 'pending',
-    signedAt: null,
-    documentHash: null,
-    signatureHash: null,
-    mailSentAt: 'Jan 15, 2024 at 9:07 AM',
-    mailOpenedAt: 'Jan 18, 2024 at 11:30 AM',
-    remindersSent: 2,
-    documentViewedAt: 'Jan 18, 2024 at 11:35 AM',
-    verificationMethod: null,
-    verifiedAt: null,
-  },
-];
+// Signer Item Component
+function SignerItem({ signer, index, onRemind }) {
+  const isSigned = signer.status === 'signed';
+  const initials = signer.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '??';
 
-const activityLog = [
-  { id: 1, title: 'Contract Created', description: 'Contract was created by John Doe', timestamp: 'Jan 15, 2024 9:00 AM', type: 'info', icon: 'document', metadata: ['Template: Sales Agreement v2.1'] },
-  { id: 2, title: 'Invitation Sent', description: 'Email invitation sent to John Smith', timestamp: 'Jan 15, 2024 9:05 AM', type: 'info', icon: 'email' },
-  { id: 3, title: 'Document Viewed', description: 'John Smith opened the document', timestamp: 'Jan 16, 2024 2:15 PM', type: 'info', icon: 'view', metadata: ['IP: 192.168.1.1', 'Chrome on Windows'] },
-  { id: 4, title: 'Identity Verified', description: 'John Smith passed identity verification', timestamp: 'Jan 16, 2024 2:25 PM', type: 'success', icon: 'verify' },
-  { id: 5, title: 'Document Signed', description: 'John Smith signed the document', timestamp: 'Jan 16, 2024 2:30 PM', type: 'success', icon: 'sign', metadata: ['IP: 192.168.1.1', 'Chrome on Windows'] },
-  { id: 6, title: 'Document Signed', description: 'Jane Doe signed the document', timestamp: 'Jan 17, 2024 10:15 AM', type: 'success', icon: 'sign' },
-  { id: 7, title: 'Reminder Sent', description: 'Reminder email sent to Bob Wilson', timestamp: 'Jan 18, 2024 9:00 AM', type: 'warning', icon: 'email' },
-];
-
-export default function ContractDetail() {
-  const [currentPartyIndex, setCurrentPartyIndex] = useState(0);
-  const [modalOpen, setModalOpen] = useState(false);
-
-  const handleViewDetails = (party) => {
-    const index = parties.findIndex(p => p.id === party.id);
-    setCurrentPartyIndex(index >= 0 ? index : 0);
-    setModalOpen(true);
+  const formatDateTime = (dateString) => {
+    if (!dateString) return null;
+    return new Date(dateString).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Link to={createPageUrl('current')}>
-            <Button variant="ghost" size="sm" className="gap-2 mb-6 -ml-2 hover:bg-slate-100">
-              <ArrowLeft className="w-4 h-4" />
-              Back to Contracts
-            </Button>
-          </Link>
+    <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-slate-200">
+      <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+        <span className="text-sm font-medium text-slate-600">{initials}</span>
+      </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-8">
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
-                    <FileText className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold text-slate-900">{contract.template}</h1>
-                    <div className="flex items-center gap-2 mt-1">
-                      <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono text-slate-600">
-                        {contract.reference}
-                      </code>
-                      <Copy className="w-3.5 h-3.5 text-slate-400 cursor-pointer hover:text-slate-600" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <StatusBadge status={contract.status} />
-                <Button className="gap-2 bg-slate-900 hover:bg-slate-800">
-                  <Eye className="w-4 h-4" />
-                  View Document
-                </Button>
-              </div>
-            </div>
+      <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <p className="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Signatory</p>
+          <p className="text-sm font-medium text-slate-900">{signer.name}</p>
+          <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+            <Mail className="w-3 h-3" />
+            {signer.email}
+          </p>
+        </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
-                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-slate-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Created</p>
-                  <p className="text-sm font-semibold text-slate-900">{contract.createdAt}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
-                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Expires</p>
-                  <p className="text-sm font-semibold text-slate-900">{contract.expiresAt}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
-                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Signed</p>
-                  <p className="text-sm font-semibold text-slate-900">{contract.signedCount} of {contract.totalParties}</p>
-                </div>
-              </div>
-
-              <div className="relative p-4 bg-slate-50 rounded-xl group hover:bg-slate-100 transition-colors overflow-hidden">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center flex-shrink-0">
-                    <Shield className="w-5 h-5 text-slate-600" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs text-slate-500">Template</p>
-                    <p className="text-sm font-semibold text-slate-900 truncate">{contract.template}</p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 flex-shrink-0"
-                    onClick={() => {/* View template logic */}}
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
+        <div>
+          <p className="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Role</p>
+          <div className="flex items-center gap-1.5 mt-1">
+            {signer.signerType === 'internal' ? (
+              <>
+                <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-sm text-slate-700">Internal</span>
+              </>
+            ) : (
+              <>
+                <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-sm text-slate-700">External</span>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Tabs: Parties, Activity Log, Linked Signing Requests */}
-        <Tabs defaultValue="parties" className="w-full">
-          <TabsList className="bg-slate-100 rounded-xl p-1 gap-1">
-            <TabsTrigger
-              value="parties"
-              className="data-[state=active]:bg-white data-[state=active]:text-slate-900 rounded-lg px-4 py-2.5 text-slate-600 text-sm font-medium gap-2"
-            >
+        <div>
+          <p className="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Signed At</p>
+          {isSigned ? (
+            <p className="text-sm text-slate-700 mt-1">{formatDateTime(signer.signedAt)}</p>
+          ) : (
+            <p className="text-sm text-slate-400 italic mt-1">Not signed yet</p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span className={cn(
+          'text-xs px-2 py-1 rounded border',
+          isSigned
+            ? 'bg-slate-100 text-slate-700 border-slate-200'
+            : 'bg-white text-slate-500 border-slate-200'
+        )}>
+          {isSigned ? 'Signed' : 'Pending'}
+        </span>
+
+        <Button variant="outline" size="sm" className="gap-1.5 text-slate-600">
+          <Eye className="w-3.5 h-3.5" />
+          View
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-500">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {!isSigned && (
+              <DropdownMenuItem onClick={() => onRemind?.(signer)}>
+                <Bell className="w-4 h-4 mr-2" />
+                Send Reminder
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem>
+              <Copy className="w-4 h-4 mr-2" />
+              Copy Email
+            </DropdownMenuItem>
+            <DropdownMenuItem>View Details</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}
+
+// Field Item Component
+function FieldItem({ field, value, signerName }) {
+  return (
+    <div className="p-4 bg-white rounded-lg border border-slate-200">
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <FormInput className="w-4 h-4 text-slate-400" />
+          <span className="text-xs text-slate-500 uppercase tracking-wide">
+            {field.label || field.type}
+          </span>
+        </div>
+        {field.validation?.required && (
+          <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded">
+            Required
+          </span>
+        )}
+      </div>
+      <p className="text-sm font-medium text-slate-900 mb-1">
+        {value || <span className="text-slate-400 italic font-normal">Not provided</span>}
+      </p>
+      {signerName && (
+        <p className="text-xs text-slate-400">Filled by {signerName}</p>
+      )}
+      {field.type === 'signature' && (
+        <p className="text-xs text-slate-400 mt-1">Page {field.page || 1}</p>
+      )}
+    </div>
+  );
+}
+
+// Timeline Item Component
+function TimelineItem({ event }) {
+  const formatDateTime = (dateString) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  return (
+    <div className="flex gap-4 p-4 bg-white rounded-lg border border-slate-200">
+      <div className="flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+          <CheckCircle className="w-4 h-4 text-slate-500" />
+        </div>
+      </div>
+      <div className="flex-1">
+        <p className="text-sm font-medium text-slate-900 capitalize">{event.status}</p>
+        <p className="text-xs text-slate-500 mt-0.5">
+          {event.actor} • {formatDateTime(event.timestamp)}
+        </p>
+        {event.note && (
+          <p className="text-xs text-slate-500 mt-1 italic">"{event.note}"</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Setting Row Component
+function SettingRow({ label, value, enabled }) {
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
+      <span className="text-sm text-slate-600">{label}</span>
+      {typeof enabled === 'boolean' ? (
+        <span className={cn(
+          'text-xs px-2 py-0.5 rounded',
+          enabled ? 'bg-slate-100 text-slate-700' : 'bg-slate-50 text-slate-400'
+        )}>
+          {enabled ? 'Enabled' : 'Disabled'}
+        </span>
+      ) : (
+        <span className="text-sm text-slate-900">{value}</span>
+      )}
+    </div>
+  );
+}
+
+export default function ContractDetail() {
+  const [searchParams] = useSearchParams();
+  const contractId = searchParams.get('id');
+
+  const [contract, setContract] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('signers');
+  const [documentOpen, setDocumentOpen] = useState(false);
+
+  // Document viewer state
+  const [numPages, setNumPages] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [zoom, setZoom] = useState(100);
+
+  // Load contract data
+  useEffect(() => {
+    const loadContract = async () => {
+      if (!contractId) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const data = await getContractById(contractId);
+        if (data) {
+          setContract(data);
+        } else {
+          toast.error('Contract not found');
+        }
+      } catch (error) {
+        console.error('Error loading contract:', error);
+        toast.error('Failed to load contract');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadContract();
+  }, [contractId]);
+
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  // Send reminder handler
+  const handleSendReminder = (signer) => {
+    toast.success(`Reminder sent to ${signer.name}`);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-slate-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!contract) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-900 font-medium mb-1">Contract Not Found</p>
+          <p className="text-sm text-slate-500 mb-4">The contract doesn't exist.</p>
+          <Link to={createPageUrl('Current')}>
+            <Button variant="outline" size="sm">Back to Contracts</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const statusLabel = statusLabels[contract.status] || contract.status;
+  const signedCount = contract.signers?.filter(s => s.status === 'signed').length || 0;
+  const totalSigners = contract.signers?.length || 0;
+
+  // Calculate expiration date
+  let expiresAt = contract.expiresAt;
+  if (!expiresAt && contract.settings?.expiration?.enabled && contract.createdAt) {
+    const expDate = new Date(contract.createdAt);
+    expDate.setDate(expDate.getDate() + (contract.settings.expiration.expiresAfterDays || 30));
+    expiresAt = expDate.toISOString();
+  }
+
+  // Get fields by type
+  const textFields = (contract.fields || []).filter(f => f.type !== 'signature' && f.type !== 'initials');
+  const signatureFields = (contract.fields || []).filter(f => f.type === 'signature' || f.type === 'initials');
+
+  // Get signer name by role/party id
+  const getSignerName = (roleId) => {
+    const signer = contract.signers?.find(s => s.id?.toString() === roleId?.toString() || s.partyId?.toString() === roleId?.toString());
+    return signer?.name || '';
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Back Button */}
+        <Link
+          to={createPageUrl('Current')}
+          className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Contracts
+        </Link>
+
+        {/* Header Card */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4 flex-1">
+              <div className="w-12 h-12 bg-slate-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl font-semibold text-slate-900 mb-1">
+                  {contract.name}
+                </h1>
+                <p className="text-sm text-slate-500 font-mono mb-2">{contract.reference}</p>
+                {contract.blueprintName && (
+                  <p className="text-xs text-slate-500">
+                    Based on <span className="font-medium text-slate-700">{contract.blueprintName}</span>
+                    {contract.blueprintVersion && (
+                      <span className="text-slate-400 ml-1">v{contract.blueprintVersion}</span>
+                    )}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <span className="text-sm px-3 py-1.5 bg-slate-100 text-slate-700 rounded-full border border-slate-200">
+                {statusLabel}
+              </span>
+              <Button
+                className="bg-slate-900 hover:bg-slate-800"
+                onClick={() => setDocumentOpen(true)}
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                View Document
+              </Button>
+            </div>
+          </div>
+
+          {/* Info Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+            <InfoCard
+              icon={Calendar}
+              label="Created"
+              value={formatDate(contract.createdAt)}
+            />
+            <InfoCard
+              icon={Clock}
+              label="Expires"
+              value={expiresAt ? formatDate(expiresAt) : 'No expiry'}
+            />
+            <InfoCard
+              icon={CheckCircle}
+              label="Signed"
+              value={`${signedCount} of ${totalSigners}`}
+            />
+            <InfoCard
+              icon={Users}
+              label="Created By"
+              value={contract.createdBy || 'System'}
+            />
+          </div>
+        </div>
+
+        {/* Tabs Section */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="bg-white border border-slate-200 p-1 mb-6">
+            <TabsTrigger value="signers" className="gap-2 data-[state=active]:bg-slate-900 data-[state=active]:text-white">
               <Users className="w-4 h-4" />
-              Parties ({parties.length})
+              Signers ({totalSigners})
             </TabsTrigger>
-            <TabsTrigger
-              value="activity"
-              className="data-[state=active]:bg-white data-[state=active]:text-slate-900 rounded-lg px-4 py-2.5 text-slate-600 text-sm font-medium gap-2"
-            >
+            <TabsTrigger value="fields" className="gap-2 data-[state=active]:bg-slate-900 data-[state=active]:text-white">
+              <FormInput className="w-4 h-4" />
+              Fields ({textFields.length + signatureFields.length})
+            </TabsTrigger>
+            <TabsTrigger value="timeline" className="gap-2 data-[state=active]:bg-slate-900 data-[state=active]:text-white">
               <Activity className="w-4 h-4" />
-              Activity Log
+              Timeline
             </TabsTrigger>
-            <TabsTrigger
-              value="signingRequests"
-              className="data-[state=active]:bg-white data-[state=active]:text-slate-900 rounded-lg px-4 py-2.5 text-slate-600 text-sm font-medium gap-2"
-            >
-              <Key className="w-4 h-4" />
-              Signing Requests ({linkedSigningRequests.length})
+            <TabsTrigger value="settings" className="gap-2 data-[state=active]:bg-slate-900 data-[state=active]:text-white">
+              <Settings className="w-4 h-4" />
+              Settings
+            </TabsTrigger>
+            <TabsTrigger value="document" className="gap-2 data-[state=active]:bg-slate-900 data-[state=active]:text-white">
+              <FileText className="w-4 h-4" />
+              Document
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="parties" className="m-0 mt-6">
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="divide-y divide-slate-100">
-                {parties.map((party) => (
-                  <div key={party.id} className="p-5 hover:bg-slate-50/50 transition-colors">
-                    <div className="flex items-center gap-6">
-                      {/* Avatar */}
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${
-                        party.status === 'signed' ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white' :
-                        party.status === 'failed' ? 'bg-gradient-to-br from-red-400 to-red-600 text-white' :
-                        'bg-gradient-to-br from-slate-300 to-slate-400 text-white'
-                      }`}>
-                        {party.name.split(' ').map(n => n[0]).join('')}
-                      </div>
-
-                      {/* Signatory */}
-                      <div className="min-w-[180px]">
-                        <p className="text-xs text-slate-400 mb-1">SIGNATORY</p>
-                        <p className="text-sm font-semibold text-slate-900">{party.name}</p>
-                        <p className="text-xs text-slate-500">{party.email}</p>
-                      </div>
-
-                      {/* Role */}
-                      <div className="min-w-[100px]">
-                        <p className="text-xs text-slate-400 mb-1">ROLE</p>
-                        <p className="text-sm font-medium text-slate-700">{party.role}</p>
-                      </div>
-
-                      {/* Signed At */}
-                      <div className="min-w-[180px]">
-                        <p className="text-xs text-slate-400 mb-1">SIGNED AT</p>
-                        <p className="text-sm text-slate-700">
-                          {party.signedAt || <span className="text-slate-400">Not signed yet</span>}
-                        </p>
-                      </div>
-
-                      {/* Status & Actions */}
-                      <div className="flex items-center gap-3 ml-auto">
-                        <StatusBadge status={party.status} />
-                        <ButtonGroup>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewDetails(party)}
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            View
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm" className="px-2">
-                                <ChevronDown className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleViewDetails(party)}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Details
-                              </DropdownMenuItem>
-                              {party.status === 'signed' && (
-                                <DropdownMenuItem>
-                                  <FileText className="w-4 h-4 mr-2" />
-                                  View Signed Document
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem>
-                                <Copy className="w-4 h-4 mr-2" />
-                                Copy Email
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Activity className="w-4 h-4 mr-2" />
-                                View Activity
-                              </DropdownMenuItem>
-                              {party.status === 'pending' && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem>
-                                    <Bell className="w-4 h-4 mr-2" />
-                                    Send Reminder
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </ButtonGroup>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          {/* Signers Tab */}
+          <TabsContent value="signers" className="space-y-3">
+            {contract.settings?.workflow?.signingOrder && (
+              <div className="mb-4 p-3 bg-slate-100 border border-slate-200 rounded-lg">
+                <p className="text-sm text-slate-600">
+                  <Workflow className="w-4 h-4 inline mr-1.5 text-slate-500" />
+                  Signing Order: <span className="font-medium capitalize text-slate-900">
+                    {contract.settings.workflow.signingOrder.replace('_', ' ')}
+                  </span>
+                </p>
               </div>
-            </div>
+            )}
+            {(contract.signers || []).map((signer, index) => (
+              <SignerItem
+                key={signer.id || index}
+                signer={signer}
+                index={index}
+                onRemind={handleSendReminder}
+              />
+            ))}
+            {(!contract.signers || contract.signers.length === 0) && (
+              <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
+                <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm text-slate-500">No signers defined</p>
+              </div>
+            )}
           </TabsContent>
 
-          <TabsContent value="activity" className="m-0 mt-6">
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="p-6">
-                <Timeline items={activityLog} />
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="signingRequests" className="m-0 mt-6">
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="p-6">
-                <div className="space-y-4">
-                  {linkedSigningRequests.map((request) => (
-                    <div
-                      key={request.token}
-                      className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
-                          <Key className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <code className="text-sm bg-white px-3 py-1.5 rounded-lg font-mono text-slate-700 border border-slate-200">
-                            {request.token}
-                          </code>
-                          <div className="flex items-center gap-4 mt-2">
-                            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                              <Calendar className="w-3 h-3" />
-                              <span>{request.date}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                              <Shield className="w-3 h-3" />
-                              <span>{request.device}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <StatusBadge status={request.status} />
-                        <Link to={createPageUrl(`SigningRequestDetail?token=${request.token}`)}>
-                          <Button variant="outline" size="sm" className="gap-2">
-                            <ExternalLink className="w-4 h-4" />
-                            View Details
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
+          {/* Fields Tab */}
+          <TabsContent value="fields" className="space-y-6">
+            {textFields.length > 0 && (
+              <div>
+                <h3 className="text-xs font-medium text-slate-500 mb-3 uppercase tracking-wide">Text Fields</h3>
+                <div className="grid md:grid-cols-2 gap-3">
+                  {textFields.map((field) => (
+                    <FieldItem
+                      key={field.id}
+                      field={field}
+                      value={contract.fieldValues?.[field.id]}
+                      signerName={getSignerName(field.role)}
+                    />
                   ))}
+                </div>
+              </div>
+            )}
+
+            {signatureFields.length > 0 && (
+              <div>
+                <h3 className="text-xs font-medium text-slate-500 mb-3 uppercase tracking-wide">Signature Fields</h3>
+                <div className="grid md:grid-cols-2 gap-3">
+                  {signatureFields.map((field) => (
+                    <FieldItem
+                      key={field.id}
+                      field={field}
+                      signerName={getSignerName(field.role)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {textFields.length === 0 && signatureFields.length === 0 && (
+              <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
+                <FormInput className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm text-slate-500">No fields defined</p>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Timeline Tab */}
+          <TabsContent value="timeline" className="space-y-3">
+            {(contract.statusHistory || []).map((event, index) => (
+              <TimelineItem key={index} event={event} />
+            ))}
+            {(!contract.statusHistory || contract.statusHistory.length === 0) && (
+              <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
+                <Activity className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm text-slate-500">No activity recorded</p>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-4">
+            {/* Workflow Settings */}
+            <div className="bg-white rounded-lg border border-slate-200 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Workflow className="w-4 h-4 text-slate-500" />
+                <h3 className="font-medium text-slate-900">Workflow</h3>
+              </div>
+              <div className="space-y-1">
+                <SettingRow
+                  label="Signing Order"
+                  value={(contract.settings?.workflow?.signingOrder || contract.settings?.signingOrder?.order || 'sequential').replace('_', ' ')}
+                />
+                <SettingRow label="Allow Decline" enabled={contract.settings?.workflow?.allowDecline ?? true} />
+                <SettingRow label="Allow Delegation" enabled={contract.settings?.workflow?.allowDelegation ?? false} />
+              </div>
+            </div>
+
+            {/* Reminders */}
+            <div className="bg-white rounded-lg border border-slate-200 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Bell className="w-4 h-4 text-slate-500" />
+                <h3 className="font-medium text-slate-900">Reminders</h3>
+              </div>
+              <div className="space-y-1">
+                <SettingRow label="Enabled" enabled={contract.settings?.reminders?.enabled ?? contract.settings?.reminder?.enabled ?? false} />
+                <SettingRow label="First Reminder After" value={`${contract.settings?.reminders?.firstReminderAfterDays || contract.settings?.reminder?.firstReminderAfterDays || 3} days`} />
+                <SettingRow label="Reminder Interval" value={`Every ${contract.settings?.reminders?.reminderIntervalDays || contract.settings?.reminder?.reminderIntervalDays || 2} days`} />
+                <SettingRow label="Max Reminders" value={contract.settings?.reminders?.maxReminders || contract.settings?.reminder?.maxReminders || 5} />
+              </div>
+            </div>
+
+            {/* Expiration */}
+            <div className="bg-white rounded-lg border border-slate-200 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="w-4 h-4 text-slate-500" />
+                <h3 className="font-medium text-slate-900">Expiration</h3>
+              </div>
+              <div className="space-y-1">
+                <SettingRow label="Enabled" enabled={contract.settings?.expiration?.enabled ?? false} />
+                <SettingRow label="Expires After" value={`${contract.settings?.expiration?.expiresAfterDays || 30} days`} />
+                <SettingRow label="Allow Extension" enabled={contract.settings?.expiration?.allowExtension ?? false} />
+              </div>
+            </div>
+
+            {/* Revocation */}
+            <div className="bg-white rounded-lg border border-slate-200 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <XCircle className="w-4 h-4 text-slate-500" />
+                <h3 className="font-medium text-slate-900">Revocation</h3>
+              </div>
+              <div className="space-y-1">
+                <SettingRow label="Allow Revocation" enabled={contract.settings?.revocation?.allowRevocation ?? contract.settings?.revoke?.allowRevocation ?? true} />
+                <SettingRow label="Require Reason" enabled={contract.settings?.revocation?.requireReason ?? false} />
+                <SettingRow label="Notify Signers" enabled={contract.settings?.revocation?.notifySigners ?? contract.settings?.revoke?.notifySigners ?? true} />
+              </div>
+            </div>
+
+            {/* Approval */}
+            <div className="bg-white rounded-lg border border-slate-200 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <ShieldCheck className="w-4 h-4 text-slate-500" />
+                <h3 className="font-medium text-slate-900">Approval</h3>
+              </div>
+              <div className="space-y-1">
+                <SettingRow label="Approval Required" enabled={contract.settings?.approval?.enabled ?? false} />
+                <SettingRow label="Required Approvers" value={contract.settings?.approval?.requiredApprovers || 1} />
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Document Tab */}
+          <TabsContent value="document">
+            <div className="bg-white rounded-lg border border-slate-200 p-8">
+              <div className="max-w-md mx-auto text-center">
+                <div className="w-16 h-16 bg-slate-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="font-medium text-slate-900 mb-1">
+                  {contract.fileName || 'Document'}
+                </h3>
+                <p className="text-sm text-slate-500 mb-6">
+                  {contract.documentType?.replace('application/', '').toUpperCase() || 'PDF'} Document
+                </p>
+
+                <div className="flex gap-3 justify-center">
+                  <Button variant="outline" className="gap-2" onClick={() => setDocumentOpen(true)}>
+                    <ExternalLink className="w-4 h-4" />
+                    Open
+                  </Button>
+                  <Button className="gap-2 bg-slate-900 hover:bg-slate-800">
+                    <Download className="w-4 h-4" />
+                    Download
+                  </Button>
                 </div>
               </div>
             </div>
@@ -393,14 +655,78 @@ export default function ContractDetail() {
         </Tabs>
       </div>
 
-      {/* Party Details Modal with Navigation */}
-      <RecordViewerModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        records={parties}
-        currentIndex={currentPartyIndex}
-        onIndexChange={setCurrentPartyIndex}
-      />
+      {/* Document Viewer Modal */}
+      <Dialog open={documentOpen} onOpenChange={setDocumentOpen}>
+        <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-4 py-3 border-b border-slate-200 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-sm font-medium">{contract.fileName || 'Document'}</DialogTitle>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 mr-4">
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}>
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <span className="text-sm text-slate-600 min-w-[60px] text-center">{currentPage} / {numPages || 1}</span>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setCurrentPage(p => Math.min(numPages || 1, p + 1))} disabled={currentPage >= (numPages || 1)}>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setZoom(z => Math.max(50, z - 25))} disabled={zoom <= 50}>
+                    <ZoomOut className="w-4 h-4" />
+                  </Button>
+                  <span className="text-sm text-slate-600 min-w-[40px] text-center">{zoom}%</span>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setZoom(z => Math.min(200, z + 25))} disabled={zoom >= 200}>
+                    <ZoomIn className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <Button variant="outline" size="sm" className="ml-2">
+                  <Download className="w-4 h-4 mr-1.5" />
+                  Download
+                </Button>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto bg-slate-100 p-6 flex justify-center">
+            {contract.documentUrl ? (
+              contract.documentType === 'application/pdf' ? (
+                <Document
+                  file={getDocumentUrl(contract.documentUrl)}
+                  onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+                  onLoadError={(error) => console.error('PDF load error:', error)}
+                  loading={
+                    <div className="text-center py-12">
+                      <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin mx-auto" />
+                    </div>
+                  }
+                >
+                  <div className="relative" style={{ width: 595 * (zoom / 100) }}>
+                    <Page
+                      pageNumber={currentPage}
+                      width={595 * (zoom / 100)}
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                      className="shadow-lg bg-white"
+                    />
+                  </div>
+                </Document>
+              ) : (
+                <div className="relative" style={{ width: 595 * (zoom / 100) }}>
+                  <img src={getDocumentUrl(contract.documentUrl)} alt="Document" className="w-full shadow-lg bg-white" />
+                </div>
+              )
+            ) : (
+              <div className="text-center py-12">
+                <FileText className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm text-slate-500">No document available</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
