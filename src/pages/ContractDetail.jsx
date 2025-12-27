@@ -711,11 +711,75 @@ export default function ContractDetail() {
                       renderAnnotationLayer={false}
                       className="shadow-lg bg-white"
                     />
+                    {/* Field Value Overlays */}
+                    {(contract.fields || [])
+                      .filter(field => field.page === currentPage || (!field.page && currentPage === 1))
+                      .map((field) => {
+                        const value = field.value || contract.fieldValues?.[field.id];
+                        if (!value && field.type !== 'signature') return null;
+
+                        const scale = zoom / 100;
+                        return (
+                          <div
+                            key={field.id}
+                            className="absolute pointer-events-none"
+                            style={{
+                              left: (field.x || 0) * scale,
+                              top: (field.y || 0) * scale,
+                              width: (field.width || 100) * scale,
+                              height: (field.height || 20) * scale,
+                              fontSize: Math.max(10, 12 * scale),
+                              display: 'flex',
+                              alignItems: 'center',
+                              color: '#1e293b',
+                              fontFamily: 'system-ui, sans-serif',
+                            }}
+                          >
+                            {field.type === 'signature' ? (
+                              <span className="text-slate-400 italic text-xs">[Signature]</span>
+                            ) : (
+                              <span className="truncate">{value}</span>
+                            )}
+                          </div>
+                        );
+                      })}
                   </div>
                 </Document>
               ) : (
                 <div className="relative" style={{ width: 595 * (zoom / 100) }}>
                   <img src={getDocumentUrl(contract.documentUrl)} alt="Document" className="w-full shadow-lg bg-white" />
+                  {/* Field Value Overlays for Images */}
+                  {(contract.fields || [])
+                    .filter(field => field.page === currentPage || (!field.page && currentPage === 1))
+                    .map((field) => {
+                      const value = field.value || contract.fieldValues?.[field.id];
+                      if (!value && field.type !== 'signature') return null;
+
+                      const scale = zoom / 100;
+                      return (
+                        <div
+                          key={field.id}
+                          className="absolute pointer-events-none"
+                          style={{
+                            left: (field.x || 0) * scale,
+                            top: (field.y || 0) * scale,
+                            width: (field.width || 100) * scale,
+                            height: (field.height || 20) * scale,
+                            fontSize: Math.max(10, 12 * scale),
+                            display: 'flex',
+                            alignItems: 'center',
+                            color: '#1e293b',
+                            fontFamily: 'system-ui, sans-serif',
+                          }}
+                        >
+                          {field.type === 'signature' ? (
+                            <span className="text-slate-400 italic text-xs">[Signature]</span>
+                          ) : (
+                            <span className="truncate">{value}</span>
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
               )
             ) : (
