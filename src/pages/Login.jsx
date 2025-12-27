@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -18,7 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { login, initializeRootUser } from '@/utils/userStorage';
+import { authApi } from '@/services/api';
 
 export default function Login({ onLogin }) {
   const { t } = useTranslation();
@@ -30,58 +30,54 @@ export default function Login({ onLogin }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    initializeRootUser();
-  }, []);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Simulate slight delay for UX
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      const result = await authApi.login(email, password);
 
-    const result = login(email, password);
+      if (result.success && result.user) {
+        // Store user in localStorage for session persistence
+        localStorage.setItem('currentUser', JSON.stringify(result.user));
 
-    if (result.success) {
-      if (onLogin) {
-        onLogin(result.user);
+        if (onLogin) {
+          onLogin(result.user);
+        }
+        // Navigate to "/" - routing will redirect to PlatformAnalytics (admin) or Dashboard (client)
+        navigate('/');
+      } else {
+        setError(result.error || 'Login failed');
       }
-      // Navigate to "/" - routing will redirect to PlatformAnalytics (admin) or Dashboard (client)
-      navigate('/');
-    } else {
-      setError(result.error);
+    } catch (err) {
+      setError(err.message || 'Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   const fillDemoCredentials = (type) => {
     switch (type) {
       case 'admin':
-        setEmail('admin@signflow.com');
+        setEmail('admin@uaekyc.com');
         setPassword('admin123');
         break;
-      case 'staff':
-        setEmail('staff@signflow.com');
-        setPassword('staff123');
-        break;
       case 'adcb':
-        setEmail('admin@adcb.ae');
-        setPassword('adcb123');
+        setEmail('ahmed.khan@adcb.ae');
+        setPassword('pass123');
         break;
       case 'enbd':
-        setEmail('admin@enbd.ae');
-        setPassword('enbd123');
+        setEmail('sara.mohammed@enbd.ae');
+        setPassword('pass123');
         break;
       case 'fab':
-        setEmail('admin@fab.ae');
-        setPassword('fab123');
+        setEmail('mariam.khalid@fab.ae');
+        setPassword('pass123');
         break;
       case 'mashreq':
-        setEmail('admin@mashreq.ae');
-        setPassword('mashreq123');
+        setEmail('layla.ahmed@mashreq.ae');
+        setPassword('pass123');
         break;
       default:
         break;
@@ -325,7 +321,7 @@ export default function Login({ onLogin }) {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-900">Platform Admin</p>
-                  <p className="text-xs text-slate-500">admin@signflow.com / admin123</p>
+                  <p className="text-xs text-slate-500">admin@uaekyc.com / admin123</p>
                 </div>
               </button>
             </div>
@@ -341,7 +337,7 @@ export default function Login({ onLogin }) {
                   <span className="text-xs font-bold text-white">AD</span>
                 </div>
                 <p className="text-sm font-semibold text-slate-900">ADCB Bank</p>
-                <p className="text-[10px] text-slate-500">admin@adcb.ae</p>
+                <p className="text-[10px] text-slate-500">ahmed.khan@adcb.ae</p>
               </button>
 
               <button
@@ -353,7 +349,7 @@ export default function Login({ onLogin }) {
                   <span className="text-xs font-bold text-white">EN</span>
                 </div>
                 <p className="text-sm font-semibold text-slate-900">Emirates NBD</p>
-                <p className="text-[10px] text-slate-500">admin@enbd.ae</p>
+                <p className="text-[10px] text-slate-500">sara.mohammed@enbd.ae</p>
               </button>
 
               <button
@@ -365,7 +361,7 @@ export default function Login({ onLogin }) {
                   <span className="text-xs font-bold text-white">FA</span>
                 </div>
                 <p className="text-sm font-semibold text-slate-900">FAB</p>
-                <p className="text-[10px] text-slate-500">admin@fab.ae</p>
+                <p className="text-[10px] text-slate-500">mariam.khalid@fab.ae</p>
               </button>
 
               <button
@@ -377,7 +373,7 @@ export default function Login({ onLogin }) {
                   <span className="text-xs font-bold text-white">MQ</span>
                 </div>
                 <p className="text-sm font-semibold text-slate-900">Mashreq</p>
-                <p className="text-[10px] text-slate-500">admin@mashreq.ae</p>
+                <p className="text-[10px] text-slate-500">layla.ahmed@mashreq.ae</p>
               </button>
             </div>
           </div>

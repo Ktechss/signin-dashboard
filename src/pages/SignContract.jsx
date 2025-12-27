@@ -22,7 +22,9 @@ import {
   Mail,
   Phone,
   File,
-  X
+  X,
+  Building2,
+  User
 } from 'lucide-react';
 
 // Configure PDF.js worker to match react-pdf's version
@@ -87,11 +89,19 @@ export default function SignContract() {
     customMessage: ''
   });
 
-  // Load templates from localStorage
+  // Load templates from API
   useEffect(() => {
-    const savedTemplates = getTemplates();
-    // Only show active templates
-    setUserTemplates(savedTemplates.filter(t => t.status === 'active'));
+    const loadTemplates = async () => {
+      try {
+        const savedTemplates = await getTemplates();
+        // Only show active templates
+        setUserTemplates(savedTemplates.filter(t => t.status === 'active'));
+      } catch (error) {
+        console.error('Error loading templates:', error);
+        setUserTemplates([]);
+      }
+    };
+    loadTemplates();
   }, []);
 
   // Initialize parties from selected template
@@ -371,18 +381,28 @@ export default function SignContract() {
 
                       {/* Overlay signature field positions from selected template */}
                       {selectedTemplate?.fields?.map((field, index) => {
-                        const colors = [
-                          { border: 'border-slate-400', bg: 'bg-slate-100/80', text: 'text-slate-700' },
-                          { border: 'border-slate-500', bg: 'bg-slate-200/80', text: 'text-slate-800' },
-                          { border: 'border-slate-600', bg: 'bg-slate-300/80', text: 'text-slate-900' },
-                          { border: 'border-slate-400', bg: 'bg-slate-100/80', text: 'text-slate-700' },
-                        ];
-                        const colorScheme = colors[index % colors.length];
+                        // Get party info for signer type display
+                        const party = selectedTemplate?.parties?.find(p => p.id?.toString() === field.role?.toString());
+                        const signerType = party?.signerType || 'external';
+                        const isInternal = signerType === 'internal';
+                        const SignerIcon = isInternal ? Building2 : User;
+
+                        const colors = isInternal ? {
+                          border: 'border-emerald-400',
+                          bg: 'bg-emerald-100/80',
+                          text: 'text-emerald-700',
+                          badge: 'bg-emerald-100 text-emerald-700'
+                        } : {
+                          border: 'border-blue-400',
+                          bg: 'bg-blue-100/80',
+                          text: 'text-blue-700',
+                          badge: 'bg-blue-100 text-blue-700'
+                        };
 
                         return (
                           <div
                             key={field.id}
-                            className={`absolute border-2 border-dashed ${colorScheme.border} ${colorScheme.bg} rounded flex items-center justify-center shadow-sm pointer-events-none`}
+                            className={`absolute border-2 border-dashed ${colors.border} ${colors.bg} rounded flex items-center justify-center shadow-sm pointer-events-none group`}
                             style={{
                               left: `${(field.x / 595) * 100}%`,
                               top: `${(field.y / 842) * 100}%`,
@@ -390,7 +410,14 @@ export default function SignContract() {
                               height: `${(field.height / 842) * 100}%`,
                             }}
                           >
-                            <span className={`text-xs font-medium ${colorScheme.text}`}>
+                            {/* Signer Type Badge */}
+                            {party && (
+                              <div className={`absolute -top-5 left-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${colors.badge}`}>
+                                <SignerIcon className="w-2.5 h-2.5" />
+                                <span>{party.name}</span>
+                              </div>
+                            )}
+                            <span className={`text-xs font-medium ${colors.text}`}>
                               {field.placeholder || field.type}
                             </span>
                           </div>
@@ -407,18 +434,28 @@ export default function SignContract() {
 
                       {/* Overlay signature field positions from selected template */}
                       {selectedTemplate?.fields?.map((field, index) => {
-                        const colors = [
-                          { border: 'border-slate-400', bg: 'bg-slate-100/80', text: 'text-slate-700' },
-                          { border: 'border-slate-500', bg: 'bg-slate-200/80', text: 'text-slate-800' },
-                          { border: 'border-slate-600', bg: 'bg-slate-300/80', text: 'text-slate-900' },
-                          { border: 'border-slate-400', bg: 'bg-slate-100/80', text: 'text-slate-700' },
-                        ];
-                        const colorScheme = colors[index % colors.length];
+                        // Get party info for signer type display
+                        const party = selectedTemplate?.parties?.find(p => p.id?.toString() === field.role?.toString());
+                        const signerType = party?.signerType || 'external';
+                        const isInternal = signerType === 'internal';
+                        const SignerIcon = isInternal ? Building2 : User;
+
+                        const colors = isInternal ? {
+                          border: 'border-emerald-400',
+                          bg: 'bg-emerald-100/80',
+                          text: 'text-emerald-700',
+                          badge: 'bg-emerald-100 text-emerald-700'
+                        } : {
+                          border: 'border-blue-400',
+                          bg: 'bg-blue-100/80',
+                          text: 'text-blue-700',
+                          badge: 'bg-blue-100 text-blue-700'
+                        };
 
                         return (
                           <div
                             key={field.id}
-                            className={`absolute border-2 border-dashed ${colorScheme.border} ${colorScheme.bg} rounded flex items-center justify-center shadow-sm pointer-events-none`}
+                            className={`absolute border-2 border-dashed ${colors.border} ${colors.bg} rounded flex items-center justify-center shadow-sm pointer-events-none group`}
                             style={{
                               left: `${(field.x / 595) * 100}%`,
                               top: `${(field.y / 842) * 100}%`,
@@ -426,7 +463,14 @@ export default function SignContract() {
                               height: `${(field.height / 842) * 100}%`,
                             }}
                           >
-                            <span className={`text-xs font-medium ${colorScheme.text}`}>
+                            {/* Signer Type Badge */}
+                            {party && (
+                              <div className={`absolute -top-5 left-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${colors.badge}`}>
+                                <SignerIcon className="w-2.5 h-2.5" />
+                                <span>{party.name}</span>
+                              </div>
+                            )}
+                            <span className={`text-xs font-medium ${colors.text}`}>
                               {field.placeholder || field.type}
                             </span>
                           </div>

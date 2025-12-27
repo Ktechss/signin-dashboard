@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
-import { saveTemplate, getTemplateById, updateTemplate } from '@/utils/templateStorage';
+import { saveTemplate, getTemplateById, updateTemplate, getDocumentUrl } from '@/utils/templateStorage';
 import { Document, Page, pdfjs } from 'react-pdf';
+import SaveVersionDialog from '@/components/templates/SaveVersionDialog';
 import {
   ArrowLeft,
   Upload,
@@ -29,6 +30,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import FieldPlacement from '@/components/templates/FieldPlacement';
+import BlueprintSettings, { DEFAULT_BLUEPRINT_SETTINGS } from '@/components/templates/BlueprintSettings';
 
 // Configure PDF.js worker to match react-pdf's version
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -36,6 +38,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.vers
 const steps = [
   { id: 'info', title: 'Basic Info & Upload', description: 'Blueprint details and document' },
   { id: 'fields', title: 'Signature Placement', description: 'Place signature fields' },
+  { id: 'settings', title: 'Settings', description: 'Configure workflow & policies' },
 ];
 
 // Clients list for org-specific blueprints
@@ -78,8 +81,12 @@ export default function TemplateBuilder() {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedPreview, setUploadedPreview] = useState(null);
   const [templateFields, setTemplateFields] = useState([]);
+  const [templateSettings, setTemplateSettings] = useState(DEFAULT_BLUEPRINT_SETTINGS);
   const [isLoading, setIsLoading] = useState(isEditMode);
   const [existingTemplate, setExistingTemplate] = useState(null);
+  const [showVersionDialog, setShowVersionDialog] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [pendingSaveAction, setPendingSaveAction] = useState(null); // 'activate' or 'draft'
 
   // Load existing template if in edit mode
   useEffect(() => {
@@ -87,15 +94,8 @@ export default function TemplateBuilder() {
       if (templateId) {
         setIsLoading(true);
         try {
-          // First try localStorage
-          let template = getTemplateById(templateId);
-
-          // If not found, try sample-blueprints.json
-          if (!template) {
-            const response = await fetch('/sample-blueprints.json');
-            const sampleBlueprints = await response.json();
-            template = sampleBlueprints.find(t => t.id.toString() === templateId.toString());
-          }
+          // Load template from API
+          const template = await getTemplateById(templateId);
 
           if (template) {
             setExistingTemplate(template);
@@ -103,9 +103,24 @@ export default function TemplateBuilder() {
               name: template.name || '',
               description: template.description || '',
             });
-            setUploadedPreview(template.documentData);
+
+            // Set document preview - handle both API stored documents and inline data
+            if (template.documentUrl) {
+              // Document is stored in MinIO, create preview object with URL
+              setUploadedPreview({
+                data: getDocumentUrl(template.documentUrl),
+                type: template.documentType || 'application/pdf',
+                thumbnail: template.thumbnailUrl ? getDocumentUrl(template.thumbnailUrl) : null,
+                numPages: template.numPages || 1
+              });
+            } else if (template.documentData) {
+              // Fallback to inline documentData if present
+              setUploadedPreview(template.documentData);
+            }
+
             setTemplateFields(template.fields || []);
             setParties(template.parties || []);
+            setTemplateSettings(template.settings || DEFAULT_BLUEPRINT_SETTINGS);
 
             // Set visibility info
             if (template.visibility) {
@@ -196,12 +211,13 @@ export default function TemplateBuilder() {
     }
   };
   const [parties, setParties] = useState([]);
-  
+
   const addParty = () => {
     const newId = parties.length > 0 ? Math.max(...parties.map(p => p.id)) + 1 : 1;
     setParties([...parties, {
       id: newId,
       name: `Signer ${newId}`,
+      signerType: 'external', // Default to external signer
       required: false,
       minCount: 0,
       maxCount: 1,
@@ -209,9 +225,13 @@ export default function TemplateBuilder() {
       colorIndex: parties.length // Save color index based on position
     }]);
   };
-  
+
   const removeParty = (id) => {
     setParties(parties.filter(p => p.id !== id));
+  };
+
+  const updateParty = (id, updates) => {
+    setParties(parties.map(p => p.id === id ? { ...p, ...updates } : p));
   };
 
   // Auto-generate parties based on signature/initials fields
@@ -233,6 +253,7 @@ export default function TemplateBuilder() {
           newParties.push({
             id: i,
             name: `Signer ${i}`,
+            signerType: 'external', // Default to external signer
             required: true,
             minCount: 1,
             maxCount: 1,
@@ -247,37 +268,63 @@ export default function TemplateBuilder() {
     }
   }, [templateFields]);
 
-  const handleActivateTemplate = () => {
+  const handleActivateTemplate = async () => {
+    // If editing existing template, show version dialog
+    if (isEditMode && existingTemplate) {
+      setPendingSaveAction('activate');
+      setShowVersionDialog(true);
+      return;
+    }
+
+    // For new templates, save directly
+    await saveTemplateWithVersion('activate');
+  };
+
+  const saveTemplateWithVersion = async (action, versionType = null, changeNote = '') => {
+    setIsSaving(true);
     try {
+      const isActivate = action === 'activate';
+
+      // Check if we have a new document upload (base64 data vs URL)
+      const hasNewDocument = uploadedPreview?.data && !uploadedPreview.data.startsWith('http');
+
       const templatePayload = {
         name: templateData.name || 'Untitled Blueprint',
         description: templateData.description,
         tags: existingTemplate?.tags || [],
-        status: 'active',
-        version: isEditMode ? existingTemplate?.version || '1.0' : '1.0',
+        status: isActivate ? 'active' : 'draft',
         fileName: uploadedFile?.name || existingTemplate?.fileName,
         filePreview: uploadedPreview?.thumbnail || uploadedPreview?.data || uploadedPreview,
         preview: uploadedPreview?.thumbnail || uploadedPreview?.data || uploadedPreview,
-        documentData: uploadedPreview,
+        // Only include documentData if it's new base64 data, not a URL
+        documentData: hasNewDocument ? uploadedPreview : undefined,
+        numPages: uploadedPreview?.numPages || existingTemplate?.numPages || 1,
         fields: templateFields,
         parties: parties,
+        settings: templateSettings,
         visibility: editVisibility,
         assignedClient: assignedClient,
+        currentStep: isActivate ? undefined : currentStep,
         lastModified: 'Just now'
       };
 
       let template;
       if (isEditMode && existingTemplate) {
-        // Update existing template
-        template = updateTemplate(existingTemplate.id, templatePayload);
+        // Build version options for update
+        const versionOptions = versionType ? { versionType, changeNote } : null;
+        template = await updateTemplate(existingTemplate.id, templatePayload, null, null, versionOptions);
+
+        const newVersion = template.version || existingTemplate.version;
         toast.success('Blueprint updated successfully!', {
-          description: `"${templatePayload.name}" has been updated.`
+          description: `"${templatePayload.name}" is now at version ${newVersion}.`
         });
       } else {
         // Save new template
-        template = saveTemplate(templatePayload);
-        toast.success('Blueprint activated successfully!', {
-          description: `"${template.name}" is now active and ready to use.`
+        template = await saveTemplate(templatePayload);
+        toast.success(isActivate ? 'Blueprint activated successfully!' : 'Blueprint saved as draft!', {
+          description: isActivate
+            ? `"${template.name}" is now active and ready to use.`
+            : 'You can continue editing it later.'
         });
       }
 
@@ -290,57 +337,31 @@ export default function TemplateBuilder() {
         }
       }, 1000);
     } catch (error) {
+      console.error('Error saving blueprint:', error);
       toast.error('Failed to save blueprint', {
         description: 'Please try again.'
       });
+    } finally {
+      setIsSaving(false);
+      setShowVersionDialog(false);
+      setPendingSaveAction(null);
     }
   };
 
-  const handleSaveAsDraft = () => {
-    try {
-      const templatePayload = {
-        name: templateData.name || 'Untitled Blueprint',
-        description: templateData.description,
-        tags: existingTemplate?.tags || [],
-        status: 'draft',
-        version: isEditMode ? existingTemplate?.version || '0.1' : '0.1',
-        fileName: uploadedFile?.name || existingTemplate?.fileName,
-        filePreview: uploadedPreview?.thumbnail || uploadedPreview?.data || uploadedPreview,
-        preview: uploadedPreview?.thumbnail || uploadedPreview?.data || uploadedPreview,
-        documentData: uploadedPreview,
-        fields: templateFields,
-        parties: parties,
-        currentStep: currentStep,
-        visibility: editVisibility,
-        assignedClient: assignedClient,
-        lastModified: 'Just now'
-      };
+  const handleVersionSave = (versionType, changeNote) => {
+    saveTemplateWithVersion(pendingSaveAction, versionType, changeNote);
+  };
 
-      let template;
-      if (isEditMode && existingTemplate) {
-        template = updateTemplate(existingTemplate.id, templatePayload);
-      } else {
-        template = saveTemplate(templatePayload);
-      }
-
-      toast.success('Blueprint saved as draft!', {
-        description: 'You can continue editing it later.'
-      });
-
-      // Navigate back to appropriate page after a brief delay
-      setTimeout(() => {
-        if (editVisibility && editVisibility !== 'public') {
-          navigate('/BlueprintGallery');
-        } else {
-          navigate(createPageUrl('Templates'));
-        }
-      }, 1000);
-    } catch (error) {
-      console.error('Error saving draft:', error);
-      toast.error('Failed to save blueprint draft', {
-        description: 'Please try again.'
-      });
+  const handleSaveAsDraft = async () => {
+    // If editing existing template, show version dialog
+    if (isEditMode && existingTemplate) {
+      setPendingSaveAction('draft');
+      setShowVersionDialog(true);
+      return;
     }
+
+    // For new templates, save directly
+    await saveTemplateWithVersion('draft');
   };
 
   const renderStepContent = () => {
@@ -486,10 +507,22 @@ export default function TemplateBuilder() {
               initialFields={templateFields}
               onAddSigner={addParty}
               onDeleteSigner={removeParty}
+              onUpdateSigner={updateParty}
             />
           </div>
         );
-        
+
+      case 2:
+        return (
+          <div className="w-full h-full">
+            <BlueprintSettings
+              settings={templateSettings}
+              onChange={setTemplateSettings}
+              parties={parties}
+            />
+          </div>
+        );
+
       default:
         return null;
     }
@@ -601,6 +634,15 @@ export default function TemplateBuilder() {
           {renderStepContent()}
         </div>
       </div>
+
+      {/* Version Save Dialog */}
+      <SaveVersionDialog
+        open={showVersionDialog}
+        onOpenChange={setShowVersionDialog}
+        currentVersion={existingTemplate?.versionNumber}
+        onSave={handleVersionSave}
+        isSaving={isSaving}
+      />
     </div>
   );
 }

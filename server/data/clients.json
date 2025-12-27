@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "name": "ADCB Bank",
+    "abbr": "AD",
+    "status": "active",
+    "createdAt": "2024-01-15T00:00:00Z"
+  },
+  {
+    "id": 2,
+    "name": "Emirates NBD",
+    "abbr": "EN",
+    "status": "active",
+    "createdAt": "2024-01-20T00:00:00Z"
+  },
+  {
+    "id": 3,
+    "name": "First Abu Dhabi Bank",
+    "abbr": "FA",
+    "status": "active",
+    "createdAt": "2024-02-01T00:00:00Z"
+  },
+  {
+    "id": 4,
+    "name": "Mashreq Bank",
+    "abbr": "MB",
+    "status": "active",
+    "createdAt": "2024-02-15T00:00:00Z"
+  }
+]

@@ -37,9 +37,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { FIELD_TYPES, FIELD_VALIDATIONS, ROLE_COLORS, getFieldTypeInfo, getRoleColorScheme, getDefaultValidation } from './FieldOverlay';
+import { FIELD_TYPES, FIELD_VALIDATIONS, ROLE_COLORS, SIGNER_TYPE_CONFIG, getFieldTypeInfo, getRoleColorScheme, getDefaultValidation } from './FieldOverlay';
 import FieldPropertiesCard from './FieldPropertiesCard';
-import SignerCard from './SignerCard';
+import SignerCard, { SIGNER_TYPES } from './SignerCard';
 
 // Configure PDF.js worker to match react-pdf's version
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -47,7 +47,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.vers
 // Convert FIELD_TYPES object to array for dropdown
 const allFieldTypes = Object.values(FIELD_TYPES);
 
-export default function FieldPlacement({ className, documentPreview, onFieldsChange, parties = [], initialFields = [], onAddSigner, onDeleteSigner }) {
+export default function FieldPlacement({ className, documentPreview, onFieldsChange, parties = [], initialFields = [], onAddSigner, onDeleteSigner, onUpdateSigner }) {
   const [zoom, setZoom] = useState(100);
   const [fields, setFields] = useState(initialFields);
   const [selectedField, setSelectedField] = useState(null);
@@ -64,6 +64,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
   const [selectedSigner, setSelectedSigner] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [initialized, setInitialized] = useState(false);
+  const [detectedNumPages, setDetectedNumPages] = useState(null);
 
   // Marquee selection state
   const [isMarqueeSelecting, setIsMarqueeSelecting] = useState(false);
@@ -98,8 +99,13 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
     }
   }, [parties.length]);
 
-  // Get total pages from document preview
-  const totalPages = documentPreview?.numPages || 1;
+  // Get total pages - prefer detected from PDF, then from preview prop
+  const totalPages = detectedNumPages || documentPreview?.numPages || 1;
+
+  // Handle PDF load success to get actual page count
+  const handlePdfLoadSuccess = ({ numPages }) => {
+    setDetectedNumPages(numPages);
+  };
 
   // Filter fields for current page only
   const currentPageFields = fields.filter(f => (f.page || 1) === currentPage);
@@ -230,6 +236,11 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
       }
     }
     setDeleteSignerDialog({ open: false, signer: null, fieldCount: 0 });
+  };
+
+  // Handle signer property updates
+  const handleUpdateSigner = (signerId, updates) => {
+    onUpdateSigner?.(signerId, updates);
   };
 
   // Notify parent when fields change
@@ -388,8 +399,8 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
         field.id === draggingField
           ? {
               ...field,
-              width: Math.max(50, resizeStart.width + deltaX),
-              height: Math.max(20, resizeStart.height + deltaY)
+              width: Math.max(20, resizeStart.width + deltaX),
+              height: Math.max(12, resizeStart.height + deltaY)
             }
           : field
       ));
@@ -464,18 +475,18 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
       assignedRole = selectedSigner || '1';
     }
 
-    // Set dimensions based on field type
+    // Set dimensions based on field type (sizes optimized for typical PDF text: 12-16px)
     const dimensions = {
-      signature: { width: 180, height: 60 },
-      initials: { width: 80, height: 40 },
-      text: { width: 150, height: 28 },
-      email: { width: 180, height: 28 },
-      phone: { width: 150, height: 28 },
-      date: { width: 120, height: 28 },
-      number: { width: 100, height: 28 },
-      checkbox: { width: 24, height: 24 },
+      signature: { width: 150, height: 40 },
+      initials: { width: 50, height: 20 },
+      text: { width: 120, height: 16 },
+      email: { width: 150, height: 16 },
+      phone: { width: 120, height: 16 },
+      date: { width: 80, height: 16 },
+      number: { width: 60, height: 16 },
+      checkbox: { width: 14, height: 14 },
     };
-    const { width, height } = dimensions[fieldType] || { width: 120, height: 30 };
+    const { width, height } = dimensions[fieldType] || { width: 100, height: 16 };
 
     // Get default label based on field type
     const defaultLabels = {
@@ -550,6 +561,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                     setExpandedSignerCard(isExpanded && parties.length > 1 ? null : party.id.toString());
                   }}
                   onDelete={handleDeleteSignerClick}
+                  onUpdate={handleUpdateSigner}
                   onAddField={addField}
                   onFieldSelect={(field) => {
                     setSelectedField(field.id);
@@ -627,18 +639,18 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                     assignedRole = parties[0]?.id.toString() || '1';
                   }
 
-                  // Set dimensions based on field type
+                  // Set dimensions based on field type (sizes optimized for typical PDF text: 12-16px)
                   const dimensions = {
-                    signature: { width: 180, height: 60 },
-                    initials: { width: 80, height: 40 },
-                    text: { width: 150, height: 28 },
-                    email: { width: 180, height: 28 },
-                    phone: { width: 150, height: 28 },
-                    date: { width: 120, height: 28 },
-                    number: { width: 100, height: 28 },
-                    checkbox: { width: 24, height: 24 },
+                    signature: { width: 150, height: 40 },
+                    initials: { width: 50, height: 20 },
+                    text: { width: 120, height: 16 },
+                    email: { width: 150, height: 16 },
+                    phone: { width: 120, height: 16 },
+                    date: { width: 80, height: 16 },
+                    number: { width: 60, height: 16 },
+                    checkbox: { width: 14, height: 14 },
                   };
-                  const { width, height } = dimensions[fieldType] || { width: 120, height: 30 };
+                  const { width, height } = dimensions[fieldType] || { width: 100, height: 16 };
 
                   // Get default label
                   const defaultLabels = {
@@ -677,6 +689,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                   <div className="absolute inset-0 pointer-events-none">
                     <Document
                       file={documentPreview.data}
+                      onLoadSuccess={handlePdfLoadSuccess}
                       onLoadError={(error) => console.error('PDF load error:', error)}
                       loading={<div className="absolute inset-0 flex items-center justify-center bg-white"><div className="text-slate-500">Loading PDF...</div></div>}
                     >
@@ -718,6 +731,12 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
               {currentPageFields.map(field => {
                 const fieldType = allFieldTypes.find(f => f.id === field.type);
 
+                // Get party info for signer type display
+                const party = parties.find(p => p.id.toString() === field.role);
+                const signerType = party?.signerType || 'external';
+                const signerConfig = SIGNER_TYPE_CONFIG[signerType];
+                const SignerTypeIcon = signerConfig?.icon;
+
                 // Get color based on assigned party/role
                 const colors = [
                   { border: 'border-indigo-400', bg: 'bg-indigo-50' },
@@ -750,6 +769,21 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                     onClick={(e) => handleFieldClick(e, field.id)}
                     onMouseDown={(e) => handleFieldMouseDown(e, field.id)}
                   >
+                    {/* Signer Type Badge - shown on hover */}
+                    {party && signerConfig && (
+                      <div
+                        className={cn(
+                          'absolute -top-6 left-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium opacity-0 group-hover:opacity-100 transition-opacity z-10',
+                          signerConfig.bgColor,
+                          signerConfig.color
+                        )}
+                      >
+                        <SignerTypeIcon className="w-2.5 h-2.5" />
+                        <span>{party.name}</span>
+                        <span className="text-[8px] opacity-70">({signerConfig.label})</span>
+                      </div>
+                    )}
+
                     {field.type === 'text' ? (
                       <div className="flex items-center justify-center pointer-events-none px-2 w-full">
                         <span className="text-xs font-medium text-slate-700 truncate">
