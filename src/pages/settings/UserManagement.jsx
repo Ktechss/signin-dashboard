@@ -4,9 +4,6 @@ import {
   Plus,
   MoreHorizontal,
   Mail,
-  Shield,
-  UserCog,
-  Eye,
   Trash2,
   Edit,
   CheckCircle2,
@@ -14,20 +11,11 @@ import {
   Users,
   Loader2,
   Phone,
-  FileEdit,
-  CheckSquare,
-  Send,
-  Pen,
-  Building2,
   Settings,
   Key,
   ClipboardList,
   CreditCard,
   FileText,
-  Upload,
-  Download,
-  AlertCircle,
-  X,
   Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -82,44 +70,27 @@ import { usersApi } from '@/services/api';
 import { useAuth } from '@/pages/index';
 import { toast } from 'sonner';
 
-// Role configuration
-const roleConfig = {
-  superadmin: { label: 'Super Admin', color: 'bg-red-100 text-red-700 border-red-200', icon: Shield },
-  admin: { label: 'Admin', color: 'bg-purple-100 text-purple-700 border-purple-200', icon: Shield },
-  staff: { label: 'Staff', color: 'bg-blue-100 text-blue-700 border-blue-200', icon: UserCog },
-};
-
 // Workflow permissions configuration
 const workflowPermissionsConfig = {
   canCreate: {
     label: 'Creator',
     description: 'Can create contracts from blueprints',
-    icon: FileEdit,
-    color: 'bg-blue-100 text-blue-700'
   },
   canApprove: {
     label: 'Approver',
     description: 'Can approve/reject contracts',
-    icon: CheckSquare,
-    color: 'bg-amber-100 text-amber-700'
   },
   canSend: {
     label: 'Sender',
     description: 'Can send contracts to external signers',
-    icon: Send,
-    color: 'bg-emerald-100 text-emerald-700'
   },
   canSign: {
     label: 'Signer',
     description: 'Can sign contracts internally',
-    icon: Pen,
-    color: 'bg-purple-100 text-purple-700'
   },
   canViewAll: {
     label: 'View All',
     description: 'Can view all contracts (not just assigned)',
-    icon: Eye,
-    color: 'bg-slate-100 text-slate-700'
   },
 };
 
@@ -213,7 +184,6 @@ export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
   const [permissionFilter, setPermissionFilter] = useState('all');
 
   // Add/Edit user state
@@ -227,7 +197,6 @@ export default function UserManagement() {
     email: '',
     phone: '',
     designation: '',
-    role: 'staff',
     workflowPermissions: { ...defaultWorkflowPermissions },
     adminPermissions: { ...defaultAdminPermissions },
   });
@@ -263,14 +232,13 @@ export default function UserManagement() {
     const matchesSearch = user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           user.designation?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
 
     let matchesPermission = true;
     if (permissionFilter !== 'all') {
       matchesPermission = user.workflowPermissions?.[permissionFilter] === true;
     }
 
-    return matchesSearch && matchesRole && matchesPermission;
+    return matchesSearch && matchesPermission;
   });
 
   const getInitials = (name) => {
@@ -315,7 +283,6 @@ export default function UserManagement() {
       email: '',
       phone: '',
       designation: '',
-      role: 'staff',
       workflowPermissions: { ...defaultWorkflowPermissions },
       adminPermissions: { ...defaultAdminPermissions },
     });
@@ -330,7 +297,6 @@ export default function UserManagement() {
       email: user.email || '',
       phone: user.phone || '',
       designation: user.designation || '',
-      role: user.role || 'staff',
       workflowPermissions: { ...defaultWorkflowPermissions, ...user.workflowPermissions },
       adminPermissions: { ...defaultAdminPermissions, ...user.adminPermissions },
     });
@@ -388,7 +354,6 @@ export default function UserManagement() {
         email: formData.email,
         phone: formData.phone,
         designation: formData.designation,
-        role: formData.role,
         workflowPermissions: formData.workflowPermissions,
         adminPermissions: formData.adminPermissions,
         clientId: clientId,
@@ -455,10 +420,6 @@ export default function UserManagement() {
   const stats = {
     total: users.length,
     active: users.filter(u => u.status === 'active').length,
-    creators: users.filter(u => u.workflowPermissions?.canCreate).length,
-    approvers: users.filter(u => u.workflowPermissions?.canApprove).length,
-    senders: users.filter(u => u.workflowPermissions?.canSend).length,
-    signers: users.filter(u => u.workflowPermissions?.canSign).length,
   };
 
   if (loading) {
@@ -488,30 +449,14 @@ export default function UserManagement() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 gap-4 max-w-md">
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <p className="text-sm text-slate-500">Total Users</p>
             <p className="text-2xl font-bold text-slate-900 mt-1">{stats.total}</p>
           </div>
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <p className="text-sm text-slate-500">Active</p>
-            <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.active}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <p className="text-sm text-slate-500">Creators</p>
-            <p className="text-2xl font-bold text-blue-600 mt-1">{stats.creators}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <p className="text-sm text-slate-500">Approvers</p>
-            <p className="text-2xl font-bold text-amber-600 mt-1">{stats.approvers}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <p className="text-sm text-slate-500">Senders</p>
-            <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.senders}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <p className="text-sm text-slate-500">Signers</p>
-            <p className="text-2xl font-bold text-purple-600 mt-1">{stats.signers}</p>
+            <p className="text-2xl font-bold text-slate-900 mt-1">{stats.active}</p>
           </div>
         </div>
 
@@ -526,16 +471,6 @@ export default function UserManagement() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="staff">Staff</SelectItem>
-            </SelectContent>
-          </Select>
           <Select value={permissionFilter} onValueChange={setPermissionFilter}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Permission" />
@@ -557,8 +492,7 @@ export default function UserManagement() {
             <TableHeader>
               <TableRow className="bg-slate-50">
                 <TableHead>User</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Workflow Permissions</TableHead>
+                <TableHead>Permissions</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Last Active</TableHead>
                 <TableHead className="w-12"></TableHead>
@@ -567,14 +501,12 @@ export default function UserManagement() {
             <TableBody>
               {filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={5} className="text-center py-8 text-slate-500">
                     No users found
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredUsers.map(user => {
-                  const role = roleConfig[user.role] || roleConfig.staff;
-                  const RoleIcon = role.icon;
                   const workflowBadges = getWorkflowBadges(user);
 
                   return (
@@ -591,7 +523,7 @@ export default function UserManagement() {
                             <div className="flex items-center gap-2">
                               <p className="font-medium text-slate-900">{user.name}</p>
                               {user.isRootUser && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-red-200 text-red-600">
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                                   Root
                                 </Badge>
                               )}
@@ -604,30 +536,17 @@ export default function UserManagement() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={cn('gap-1', role.color)}
-                        >
-                          <RoleIcon className="w-3 h-3" />
-                          {role.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {workflowBadges.length > 0 ? (
-                            workflowBadges.map((badge) => {
-                              const BadgeIcon = badge.icon;
-                              return (
-                                <Badge
-                                  key={badge.key}
-                                  variant="secondary"
-                                  className={cn('gap-1 text-xs', badge.color)}
-                                >
-                                  <BadgeIcon className="w-3 h-3" />
-                                  {badge.label}
-                                </Badge>
-                              );
-                            })
+                            workflowBadges.map((badge) => (
+                              <Badge
+                                key={badge.key}
+                                variant="secondary"
+                                className="text-xs bg-slate-100 text-slate-700"
+                              >
+                                {badge.label}
+                              </Badge>
+                            ))
                           ) : (
                             <span className="text-sm text-slate-400">No permissions</span>
                           )}
@@ -684,26 +603,6 @@ export default function UserManagement() {
           </Table>
         </div>
 
-        {/* Workflow Permission Reference */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h3 className="font-semibold text-slate-900 mb-4">Workflow Permission Reference</h3>
-          <div className="grid md:grid-cols-5 gap-4">
-            {Object.entries(workflowPermissionsConfig).map(([key, config]) => {
-              const Icon = config.icon;
-              return (
-                <div key={key} className={cn('p-4 rounded-lg border', config.color.replace('text-', 'border-').split(' ')[0] + '-200')}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', config.color)}>
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <span className="font-medium text-slate-900">{config.label}</span>
-                  </div>
-                  <p className="text-sm text-slate-500">{config.description}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </div>
 
       {/* Add/Edit User Sheet */}
@@ -779,34 +678,17 @@ export default function UserManagement() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="+971 50 XXX XXXX"
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="+971 50 XXX XXXX"
+                    className="pl-10"
+                  />
                 </div>
               </div>
             </div>
@@ -818,9 +700,8 @@ export default function UserManagement() {
                 Define what actions this user can perform in the contract workflow.
               </p>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {Object.entries(workflowPermissionsConfig).map(([key, config]) => {
-                  const Icon = config.icon;
                   const isChecked = formData.workflowPermissions[key];
 
                   return (
@@ -835,9 +716,6 @@ export default function UserManagement() {
                       )}
                     >
                       <Checkbox checked={isChecked} />
-                      <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', config.color)}>
-                        <Icon className="w-4 h-4" />
-                      </div>
                       <div className="flex-1">
                         <p className="font-medium text-sm text-slate-900">{config.label}</p>
                         <p className="text-xs text-slate-500">{config.description}</p>

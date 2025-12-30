@@ -1,28 +1,40 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
+
+// Layout & Dashboard (root level)
 import Layout from "./Layout.jsx";
 import Dashboard from "./Dashboard";
-import Current from "./Current";
-import Contracts from "./Contracts";
-import ContractCreate from "./ContractCreate";
-import ContractDetail from "./ContractDetail";
-import SigningRequests from "./SigningRequests";
-import Templates from "./Templates";
-import TemplateBuilder from "./TemplateBuilder";
-import SignContract from "./SignContract";
-import Analytics from "./Analytics";
 import Notifications from "./Notifications";
-import Settings from "./Settings";
-import UserManagement from "./UserManagement";
-import TemplateDetail from "./TemplateDetail";
-import SigningRequestDetail from "./SigningRequestDetail";
-import APIKeys from "./APIKeys";
-import AuditLogs from "./AuditLogs";
-import Billing from "./Billing";
-import Login from "./Login";
 import GovernmentSearch from "./GovernmentSearch";
-import PlatformAnalytics from "./PlatformAnalytics";
-import PlatformAuditLogs from "./PlatformAuditLogs";
-import BlueprintGallery from "./BlueprintGallery";
+
+// Auth pages
+import Login from "./auth/Login";
+
+// Contract pages
+import Current from "./contracts/Current";
+import Contracts from "./contracts/Contracts";
+import ContractCreate from "./contracts/ContractCreate";
+import ContractDetail from "./contracts/ContractDetail";
+import SignContract from "./contracts/SignContract";
+import SigningRequests from "./contracts/SigningRequests";
+import SigningRequestDetail from "./contracts/SigningRequestDetail";
+
+// Template pages
+import Templates from "./templates/Templates";
+import TemplateBuilder from "./templates/TemplateBuilder";
+import TemplateDetail from "./templates/TemplateDetail";
+import BlueprintGallery from "./templates/BlueprintGallery";
+
+// Analytics pages
+import Analytics from "./analytics/Analytics";
+import PlatformAnalytics from "./analytics/PlatformAnalytics";
+
+// Settings pages
+import Settings from "./settings/Settings";
+import UserManagement from "./settings/UserManagement";
+import APIKeys from "./settings/APIKeys";
+import AuditLogs from "./settings/AuditLogs";
+import PlatformAuditLogs from "./settings/PlatformAuditLogs";
+import Billing from "./settings/Billing";
 import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 import { getCurrentUser, logout as logoutUser, isAuthenticated } from '@/utils/userStorage';
 import { LanguageProvider } from '@/contexts/LanguageContext';

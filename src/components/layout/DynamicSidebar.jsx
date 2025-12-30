@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { createPageUrl } from '@/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -225,8 +225,35 @@ export default function DynamicSidebar({
 }) {
   const { t } = useTranslation();
   const { language, toggleLanguage, isRTL } = useLanguage();
+  const location = useLocation();
   const [expandedItems, setExpandedItems] = useState(['logs', 'Contracts']);
   const [isDarkMode, setIsDarkMode] = useState(true);
+
+  // Helper to check if a child nav item is active (matches both path and query params)
+  const isChildActive = (child) => {
+    const basePath = createPageUrl(child.href);
+
+    // Check if current path matches
+    if (location.pathname !== basePath) {
+      return false;
+    }
+
+    // If child has no params, it's active only if current URL has no relevant params
+    if (!child.params) {
+      // Active if no status/filter params in current URL
+      const currentParams = new URLSearchParams(location.search);
+      return !currentParams.has('status') && !currentParams.has('filter') && !currentParams.has('signer');
+    }
+
+    // Check if all child params match current URL params
+    const currentParams = new URLSearchParams(location.search);
+    for (const [key, value] of Object.entries(child.params)) {
+      if (currentParams.get(key) !== value) {
+        return false;
+      }
+    }
+    return true;
+  };
 
   const toggleExpand = (id) => {
     setExpandedItems(prev =>
@@ -408,7 +435,7 @@ export default function DynamicSidebar({
                             className={cn(
                               "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors",
                               isRTL ? "text-right flex-row-reverse" : "text-left",
-                              currentPage === child.href ? themeStyles.childActive : themeStyles.childInactive
+                              isChildActive(child) ? themeStyles.childActive : themeStyles.childInactive
                             )}
                           >
                             {child.icon && <child.icon className="w-3.5 h-3.5 flex-shrink-0" />}

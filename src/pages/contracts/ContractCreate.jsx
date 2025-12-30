@@ -45,6 +45,145 @@ import { cn } from '@/lib/utils';
 import { SIGNER_TYPES } from '@/components/templates/SignerCard';
 import { FIELD_TYPES } from '@/components/templates/FieldOverlay';
 import { Progress } from '@/components/ui/progress';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { ChevronsUpDown } from 'lucide-react';
+// ID verification types
+const ID_TYPES = {
+  none: { id: 'none', label: 'No ID Verification' },
+  emirates_id: { id: 'emirates_id', label: 'Emirates ID' },
+  passport: { id: 'passport', label: 'Passport' },
+  gcc_id: { id: 'gcc_id', label: 'GCC ID' },
+  uaekyc_id: { id: 'uaekyc_id', label: 'UAEKYC ID' },
+};
+
+const GCC_COUNTRIES = [
+  { value: 'ae', label: 'UAE' },
+  { value: 'sa', label: 'Saudi Arabia' },
+  { value: 'kw', label: 'Kuwait' },
+  { value: 'bh', label: 'Bahrain' },
+  { value: 'qa', label: 'Qatar' },
+  { value: 'om', label: 'Oman' },
+];
+
+const COUNTRIES = [
+  { value: 'af', label: 'Afghanistan' },
+  { value: 'al', label: 'Albania' },
+  { value: 'dz', label: 'Algeria' },
+  { value: 'ar', label: 'Argentina' },
+  { value: 'am', label: 'Armenia' },
+  { value: 'au', label: 'Australia' },
+  { value: 'at', label: 'Austria' },
+  { value: 'az', label: 'Azerbaijan' },
+  { value: 'bh', label: 'Bahrain' },
+  { value: 'bd', label: 'Bangladesh' },
+  { value: 'by', label: 'Belarus' },
+  { value: 'be', label: 'Belgium' },
+  { value: 'br', label: 'Brazil' },
+  { value: 'bn', label: 'Brunei' },
+  { value: 'bg', label: 'Bulgaria' },
+  { value: 'ca', label: 'Canada' },
+  { value: 'cn', label: 'China' },
+  { value: 'co', label: 'Colombia' },
+  { value: 'hr', label: 'Croatia' },
+  { value: 'cy', label: 'Cyprus' },
+  { value: 'cz', label: 'Czech Republic' },
+  { value: 'dk', label: 'Denmark' },
+  { value: 'eg', label: 'Egypt' },
+  { value: 'ee', label: 'Estonia' },
+  { value: 'et', label: 'Ethiopia' },
+  { value: 'fi', label: 'Finland' },
+  { value: 'fr', label: 'France' },
+  { value: 'ge', label: 'Georgia' },
+  { value: 'de', label: 'Germany' },
+  { value: 'gh', label: 'Ghana' },
+  { value: 'gr', label: 'Greece' },
+  { value: 'hk', label: 'Hong Kong' },
+  { value: 'hu', label: 'Hungary' },
+  { value: 'in', label: 'India' },
+  { value: 'id', label: 'Indonesia' },
+  { value: 'ir', label: 'Iran' },
+  { value: 'iq', label: 'Iraq' },
+  { value: 'ie', label: 'Ireland' },
+  { value: 'il', label: 'Israel' },
+  { value: 'it', label: 'Italy' },
+  { value: 'jp', label: 'Japan' },
+  { value: 'jo', label: 'Jordan' },
+  { value: 'kz', label: 'Kazakhstan' },
+  { value: 'ke', label: 'Kenya' },
+  { value: 'kw', label: 'Kuwait' },
+  { value: 'kg', label: 'Kyrgyzstan' },
+  { value: 'lv', label: 'Latvia' },
+  { value: 'lb', label: 'Lebanon' },
+  { value: 'ly', label: 'Libya' },
+  { value: 'lt', label: 'Lithuania' },
+  { value: 'lu', label: 'Luxembourg' },
+  { value: 'my', label: 'Malaysia' },
+  { value: 'mv', label: 'Maldives' },
+  { value: 'mx', label: 'Mexico' },
+  { value: 'ma', label: 'Morocco' },
+  { value: 'np', label: 'Nepal' },
+  { value: 'nl', label: 'Netherlands' },
+  { value: 'nz', label: 'New Zealand' },
+  { value: 'ng', label: 'Nigeria' },
+  { value: 'no', label: 'Norway' },
+  { value: 'om', label: 'Oman' },
+  { value: 'pk', label: 'Pakistan' },
+  { value: 'ps', label: 'Palestine' },
+  { value: 'ph', label: 'Philippines' },
+  { value: 'pl', label: 'Poland' },
+  { value: 'pt', label: 'Portugal' },
+  { value: 'qa', label: 'Qatar' },
+  { value: 'ro', label: 'Romania' },
+  { value: 'ru', label: 'Russia' },
+  { value: 'sa', label: 'Saudi Arabia' },
+  { value: 'rs', label: 'Serbia' },
+  { value: 'sg', label: 'Singapore' },
+  { value: 'sk', label: 'Slovakia' },
+  { value: 'si', label: 'Slovenia' },
+  { value: 'za', label: 'South Africa' },
+  { value: 'kr', label: 'South Korea' },
+  { value: 'es', label: 'Spain' },
+  { value: 'lk', label: 'Sri Lanka' },
+  { value: 'sd', label: 'Sudan' },
+  { value: 'se', label: 'Sweden' },
+  { value: 'ch', label: 'Switzerland' },
+  { value: 'sy', label: 'Syria' },
+  { value: 'tw', label: 'Taiwan' },
+  { value: 'tj', label: 'Tajikistan' },
+  { value: 'tz', label: 'Tanzania' },
+  { value: 'th', label: 'Thailand' },
+  { value: 'tn', label: 'Tunisia' },
+  { value: 'tr', label: 'Turkey' },
+  { value: 'tm', label: 'Turkmenistan' },
+  { value: 'ug', label: 'Uganda' },
+  { value: 'ua', label: 'Ukraine' },
+  { value: 'ae', label: 'United Arab Emirates' },
+  { value: 'gb', label: 'United Kingdom' },
+  { value: 'us', label: 'United States' },
+  { value: 'uz', label: 'Uzbekistan' },
+  { value: 'vn', label: 'Vietnam' },
+  { value: 'ye', label: 'Yemen' },
+  { value: 'zw', label: 'Zimbabwe' },
+];
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -140,6 +279,7 @@ export default function ContractCreate() {
     notes: '',
     signerEmails: {},
     signerNames: {},
+    signerIdDetails: {}, // { signerId: { idType, emiratesId, passport: { country, type, number }, gccId: { country, number }, uaekycId } }
     fieldValues: {},
     createdBy: 'Current User',
   });
@@ -203,6 +343,7 @@ export default function ContractCreate() {
       reference: `CON-${Date.now().toString().slice(-6)}`,
       signerEmails: {},
       signerNames: {},
+      signerIdDetails: {},
       fieldValues: {},
     }));
     // Reset bulk data when changing blueprint
@@ -218,6 +359,35 @@ export default function ContractCreate() {
       [field]: {
         ...prev[field],
         [signerId]: value,
+      },
+    }));
+  };
+
+  const handleSignerIdChange = (signerId, idField, value) => {
+    setContractData(prev => ({
+      ...prev,
+      signerIdDetails: {
+        ...prev.signerIdDetails,
+        [signerId]: {
+          ...prev.signerIdDetails[signerId],
+          [idField]: value,
+        },
+      },
+    }));
+  };
+
+  const handleSignerIdNestedChange = (signerId, parentField, childField, value) => {
+    setContractData(prev => ({
+      ...prev,
+      signerIdDetails: {
+        ...prev.signerIdDetails,
+        [signerId]: {
+          ...prev.signerIdDetails[signerId],
+          [parentField]: {
+            ...prev.signerIdDetails[signerId]?.[parentField],
+            [childField]: value,
+          },
+        },
       },
     }));
   };
@@ -946,80 +1116,345 @@ export default function ContractCreate() {
                   return (
                     <div
                       key={party.id}
-                      className={cn(
-                        'p-5 rounded-xl border-2',
-                        signerType.borderColor,
-                        signerType.bgColor
-                      )}
+                      className="p-5 rounded-xl border border-slate-200 bg-white"
                     >
                       {/* Signer Header */}
-                      <div className="flex items-center gap-3 mb-5 pb-4 border-b border-slate-200/50">
-                        <div className={cn(
-                          'w-10 h-10 rounded-full flex items-center justify-center',
-                          'bg-white shadow-sm'
-                        )}>
-                          <SignerIcon className={cn('w-5 h-5', signerType.color)} />
+                      <div className="flex items-center gap-3 mb-5 pb-4 border-b border-slate-100">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-100">
+                          <SignerIcon className="w-5 h-5 text-slate-600" />
                         </div>
                         <div className="flex-1">
                           <p className="font-semibold text-slate-900">{party.name}</p>
-                          <p className={cn('text-xs', signerType.color)}>{signerType.label}</p>
-                        </div>
-                        <span className="text-xs bg-white/80 px-2 py-1 rounded-full text-slate-500">
-                          {signerFields.length} fields
-                        </span>
-                      </div>
-
-                      {/* Basic Signer Info */}
-                      <div className="grid grid-cols-2 gap-4 mb-5">
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium text-slate-700">Full Name *</Label>
-                          <Input
-                            value={contractData.signerNames[party.id] || ''}
-                            onChange={(e) => handleSignerChange(party.id, 'signerNames', e.target.value)}
-                            placeholder={`Enter ${party.name}'s full name`}
-                            className="bg-white"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium text-slate-700">Email Address *</Label>
-                          <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <Input
-                              type="email"
-                              value={contractData.signerEmails[party.id] || ''}
-                              onChange={(e) => handleSignerChange(party.id, 'signerEmails', e.target.value)}
-                              placeholder="email@example.com"
-                              className="pl-9 bg-white"
-                            />
-                          </div>
+                          <p className="text-xs text-slate-500">{signerType.label}</p>
                         </div>
                       </div>
 
-                      {/* Blueprint Fields for this Signer */}
-                      {signerFields.length > 0 && (
-                        <div className="space-y-4">
-                          <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">
-                            Fields to complete
-                          </p>
+                      {/* Section 1: Signer Identification */}
+                      <div className="mb-6">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Mail className="w-4 h-4 text-slate-500" />
+                          <h4 className="text-sm font-medium text-slate-900">Signer Identification</h4>
+                          <span className="text-xs text-slate-400">— used to send signing link & verify identity</span>
+                        </div>
+                        <div className="p-4 bg-slate-50 rounded-lg space-y-4">
+                          {/* Basic Info */}
                           <div className="grid grid-cols-2 gap-4">
-                            {signerFields.map((field) => {
-                              const fieldTypeConfig = FIELD_TYPES[field.type];
-                              const FieldIcon = fieldTypeConfig?.icon || Type;
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium text-slate-700">Full Name *</Label>
+                              <Input
+                                value={contractData.signerNames[party.id] || ''}
+                                onChange={(e) => handleSignerChange(party.id, 'signerNames', e.target.value)}
+                                placeholder={`Enter ${party.name}'s full name`}
+                                className="bg-white"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium text-slate-700">Email Address *</Label>
+                              <div className="relative">
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <Input
+                                  type="email"
+                                  value={contractData.signerEmails[party.id] || ''}
+                                  onChange={(e) => handleSignerChange(party.id, 'signerEmails', e.target.value)}
+                                  placeholder="email@example.com"
+                                  className="pl-9 bg-white"
+                                />
+                              </div>
+                            </div>
+                          </div>
 
-                              return (
-                                <div key={field.id} className="space-y-2">
-                                  <Label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
-                                    <FieldIcon className="w-3 h-3 text-slate-400" />
-                                    {field.label || field.placeholder || fieldTypeConfig?.label || field.type}
-                                    {field.required && <span className="text-red-500">*</span>}
-                                  </Label>
-                                  {renderFieldInput(field)}
+                          {/* ID Verification */}
+                          <div className="pt-3 border-t border-slate-200">
+                            <div className="grid grid-cols-4 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-xs font-medium text-slate-700">ID Type</Label>
+                                <Select
+                                  value={contractData.signerIdDetails[party.id]?.idType || 'none'}
+                                  onValueChange={(value) => handleSignerIdChange(party.id, 'idType', value)}
+                                >
+                                  <SelectTrigger className="bg-white">
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Object.values(ID_TYPES).map((type) => (
+                                      <SelectItem key={type.id} value={type.id}>
+                                        {type.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              {/* Emirates ID */}
+                              {contractData.signerIdDetails[party.id]?.idType === 'emirates_id' && (
+                                <div className="space-y-2 col-span-3">
+                                  <Label className="text-xs font-medium text-slate-700">Emirates ID Number</Label>
+                                  <Input
+                                    value={contractData.signerIdDetails[party.id]?.emiratesId || ''}
+                                    onChange={(e) => handleSignerIdChange(party.id, 'emiratesId', e.target.value)}
+                                    placeholder="784-XXXX-XXXXXXX-X"
+                                    className="bg-white"
+                                  />
                                 </div>
-                              );
-                            })}
+                              )}
+
+                              {/* Passport */}
+                              {contractData.signerIdDetails[party.id]?.idType === 'passport' && (
+                                <>
+                                  <div className="space-y-2">
+                                    <Label className="text-xs font-medium text-slate-700">Country</Label>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          role="combobox"
+                                          className="w-full justify-between bg-white font-normal"
+                                        >
+                                          {contractData.signerIdDetails[party.id]?.passport?.country
+                                            ? COUNTRIES.find(c => c.value === contractData.signerIdDetails[party.id]?.passport?.country)?.label
+                                            : "Select country"}
+                                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-[200px] p-0">
+                                        <Command>
+                                          <CommandInput placeholder="Search country..." />
+                                          <CommandList>
+                                            <CommandEmpty>No country found.</CommandEmpty>
+                                            <CommandGroup>
+                                              {COUNTRIES.map((country) => (
+                                                <CommandItem
+                                                  key={country.value}
+                                                  value={country.label}
+                                                  onSelect={() => handleSignerIdNestedChange(party.id, 'passport', 'country', country.value)}
+                                                >
+                                                  {country.label}
+                                                </CommandItem>
+                                              ))}
+                                            </CommandGroup>
+                                          </CommandList>
+                                        </Command>
+                                      </PopoverContent>
+                                    </Popover>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="text-xs font-medium text-slate-700">Type</Label>
+                                    <Input
+                                      value={contractData.signerIdDetails[party.id]?.passport?.type || ''}
+                                      onChange={(e) => handleSignerIdNestedChange(party.id, 'passport', 'type', e.target.value)}
+                                      placeholder="e.g., Regular"
+                                      className="bg-white"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="text-xs font-medium text-slate-700">Number</Label>
+                                    <Input
+                                      value={contractData.signerIdDetails[party.id]?.passport?.number || ''}
+                                      onChange={(e) => handleSignerIdNestedChange(party.id, 'passport', 'number', e.target.value)}
+                                      placeholder="e.g., AB1234567"
+                                      className="bg-white"
+                                    />
+                                  </div>
+                                </>
+                              )}
+
+                              {/* GCC ID */}
+                              {contractData.signerIdDetails[party.id]?.idType === 'gcc_id' && (
+                                <>
+                                  <div className="space-y-2">
+                                    <Label className="text-xs font-medium text-slate-700">Country</Label>
+                                    <Select
+                                      value={contractData.signerIdDetails[party.id]?.gccId?.country || ''}
+                                      onValueChange={(value) => handleSignerIdNestedChange(party.id, 'gccId', 'country', value)}
+                                    >
+                                      <SelectTrigger className="bg-white">
+                                        <SelectValue placeholder="Select" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {GCC_COUNTRIES.map((country) => (
+                                          <SelectItem key={country.value} value={country.value}>
+                                            {country.label}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="space-y-2 col-span-2">
+                                    <Label className="text-xs font-medium text-slate-700">ID Number</Label>
+                                    <Input
+                                      value={contractData.signerIdDetails[party.id]?.gccId?.number || ''}
+                                      onChange={(e) => handleSignerIdNestedChange(party.id, 'gccId', 'number', e.target.value)}
+                                      placeholder="Enter ID number"
+                                      className="bg-white"
+                                    />
+                                  </div>
+                                </>
+                              )}
+
+                              {/* UAEKYC ID */}
+                              {contractData.signerIdDetails[party.id]?.idType === 'uaekyc_id' && (
+                                <div className="space-y-2 col-span-3">
+                                  <Label className="text-xs font-medium text-slate-700">UAEKYC ID</Label>
+                                  <Input
+                                    value={contractData.signerIdDetails[party.id]?.uaekycId || ''}
+                                    onChange={(e) => handleSignerIdChange(party.id, 'uaekycId', e.target.value)}
+                                    placeholder="Enter UAEKYC ID"
+                                    className="bg-white"
+                                  />
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      )}
+                      </div>
+
+                      {/* Section 2: Contract Details */}
+                      {signerFields.length > 0 && (() => {
+                        // Group fields by label+type to avoid duplicate entries
+                        const groupedFields = signerFields.reduce((acc, field) => {
+                          const fieldTypeConfig = FIELD_TYPES[field.type];
+                          const label = field.label || field.placeholder || fieldTypeConfig?.label || field.type;
+                          const groupKey = `${field.type}::${label}`;
+
+                          if (!acc[groupKey]) {
+                            acc[groupKey] = {
+                              type: field.type,
+                              label,
+                              required: field.required,
+                              placeholder: field.placeholder,
+                              fields: [],
+                            };
+                          }
+                          acc[groupKey].fields.push(field);
+                          // If any field in group is required, mark group as required
+                          if (field.required) acc[groupKey].required = true;
+                          return acc;
+                        }, {});
+
+                        const groupedEntries = Object.entries(groupedFields);
+
+                        // Handler to update all fields in a group
+                        const handleGroupFieldChange = (fields, value) => {
+                          fields.forEach(field => handleFieldChange(field.id, value));
+                        };
+
+                        return (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <ClipboardCheck className="w-4 h-4 text-slate-500" />
+                              <h4 className="text-sm font-medium text-slate-900">Contract Details</h4>
+                              <span className="text-xs text-slate-400">— fields to be filled in the contract</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg">
+                              {groupedEntries.map(([groupKey, group]) => {
+                                const fieldTypeConfig = FIELD_TYPES[group.type];
+                                const FieldIcon = fieldTypeConfig?.icon || Type;
+                                const firstField = group.fields[0];
+                                const fieldCount = group.fields.length;
+                                const value = contractData.fieldValues[firstField.id] || '';
+
+                                // Render input based on field type
+                                const renderGroupInput = () => {
+                                  switch (group.type) {
+                                    case 'signature':
+                                    case 'initials':
+                                      return (
+                                        <div className="flex items-center gap-2 text-slate-500 text-sm py-2 px-3 bg-white rounded-lg border border-slate-200">
+                                          <Pen className="w-4 h-4" />
+                                          <span>Will be collected during signing</span>
+                                        </div>
+                                      );
+                                    case 'checkbox':
+                                      return (
+                                        <div className="flex items-center gap-2">
+                                          <Checkbox
+                                            id={groupKey}
+                                            checked={value === true}
+                                            onCheckedChange={(checked) => handleGroupFieldChange(group.fields, checked)}
+                                          />
+                                          <Label htmlFor={groupKey} className="text-sm text-slate-600">
+                                            {group.placeholder || 'Check if applicable'}
+                                          </Label>
+                                        </div>
+                                      );
+                                    case 'date':
+                                      return (
+                                        <Input
+                                          type="date"
+                                          value={value}
+                                          onChange={(e) => handleGroupFieldChange(group.fields, e.target.value)}
+                                          className="bg-white"
+                                        />
+                                      );
+                                    case 'number':
+                                      return (
+                                        <Input
+                                          type="number"
+                                          value={value}
+                                          onChange={(e) => handleGroupFieldChange(group.fields, e.target.value)}
+                                          placeholder={group.placeholder || 'Enter number'}
+                                          className="bg-white"
+                                        />
+                                      );
+                                    case 'email':
+                                      return (
+                                        <div className="relative">
+                                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                          <Input
+                                            type="email"
+                                            value={value}
+                                            onChange={(e) => handleGroupFieldChange(group.fields, e.target.value)}
+                                            placeholder={group.placeholder || 'email@example.com'}
+                                            className="pl-9 bg-white"
+                                          />
+                                        </div>
+                                      );
+                                    case 'phone':
+                                      return (
+                                        <div className="relative">
+                                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                          <Input
+                                            type="tel"
+                                            value={value}
+                                            onChange={(e) => handleGroupFieldChange(group.fields, e.target.value)}
+                                            placeholder={group.placeholder || '+971 XX XXX XXXX'}
+                                            className="pl-9 bg-white"
+                                          />
+                                        </div>
+                                      );
+                                    default:
+                                      return (
+                                        <Input
+                                          type="text"
+                                          value={value}
+                                          onChange={(e) => handleGroupFieldChange(group.fields, e.target.value)}
+                                          placeholder={group.placeholder || 'Enter text'}
+                                          className="bg-white"
+                                        />
+                                      );
+                                  }
+                                };
+
+                                return (
+                                  <div key={groupKey} className="space-y-2">
+                                    <Label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+                                      <FieldIcon className="w-3 h-3 text-slate-400" />
+                                      {group.label}
+                                      {group.required && <span className="text-red-500">*</span>}
+                                      {fieldCount > 1 && (
+                                        <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full ml-1">
+                                          ×{fieldCount}
+                                        </span>
+                                      )}
+                                    </Label>
+                                    {renderGroupInput()}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -1171,22 +1606,16 @@ export default function ContractCreate() {
                     const signerFields = getFieldsBySigner(party.id);
 
                     return (
-                      <div key={party.id} className={cn(
-                        'p-3 rounded-lg border',
-                        signerType.borderColor,
-                        signerType.bgColor
-                      )}>
+                      <div key={party.id} className="p-3 rounded-lg border border-slate-200 bg-slate-50">
                         <div className="flex items-center gap-2">
-                          <div className={cn(
-                            'w-8 h-8 rounded-full flex items-center justify-center bg-white'
-                          )}>
-                            <SignerIcon className={cn('w-4 h-4', signerType.color)} />
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white border border-slate-200">
+                            <SignerIcon className="w-4 h-4 text-slate-600" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm text-slate-900 truncate">{name}</p>
                             <p className="text-xs text-slate-500 truncate">{email}</p>
                           </div>
-                          <span className="text-[10px] bg-white/80 px-1.5 py-0.5 rounded text-slate-500 shrink-0">
+                          <span className="text-[10px] bg-white px-1.5 py-0.5 rounded text-slate-500 shrink-0 border border-slate-200">
                             {signerFields.length} fields
                           </span>
                         </div>
