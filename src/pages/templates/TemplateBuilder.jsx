@@ -210,27 +210,51 @@ export default function TemplateBuilder() {
       }
     }
   };
-  const [parties, setParties] = useState([]);
+  // Initialize with default Establishment 1 signer
+  const [parties, setParties] = useState([{
+    id: 1,
+    name: 'Establishment 1',
+    signerType: 'establishment',
+    required: true,
+    minCount: 1,
+    maxCount: 1,
+    order: 1,
+    colorIndex: 0
+  }]);
 
   const addParty = () => {
     const newId = parties.length > 0 ? Math.max(...parties.map(p => p.id)) + 1 : 1;
+    // Determine signer type and name based on existing parties
+    const establishmentCount = parties.filter(p => p.signerType === 'establishment').length;
+    const externalCount = parties.filter(p => p.signerType === 'external').length;
+
     setParties([...parties, {
       id: newId,
-      name: `Signer ${newId}`,
-      signerType: 'external', // Default to external signer
+      name: `Signer ${externalCount + 1}`,
+      signerType: 'external', // New signers default to external
       required: false,
       minCount: 0,
       maxCount: 1,
       order: parties.length + 1,
-      colorIndex: parties.length // Save color index based on position
+      colorIndex: parties.length
     }]);
   };
 
   const removeParty = (id) => {
+    // Prevent deletion of establishment signers
+    const party = parties.find(p => p.id === id);
+    if (party?.signerType === 'establishment') {
+      return; // Cannot delete establishment signers
+    }
     setParties(parties.filter(p => p.id !== id));
   };
 
   const updateParty = (id, updates) => {
+    // Prevent modification of establishment signers
+    const party = parties.find(p => p.id === id);
+    if (party?.signerType === 'establishment') {
+      return; // Cannot modify establishment signers
+    }
     setParties(parties.map(p => p.id === id ? { ...p, ...updates } : p));
   };
 

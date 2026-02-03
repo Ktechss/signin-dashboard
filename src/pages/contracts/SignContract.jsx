@@ -384,19 +384,19 @@ export default function SignContract() {
                         // Get party info for signer type display
                         const party = selectedTemplate?.parties?.find(p => p.id?.toString() === field.role?.toString());
                         const signerType = party?.signerType || 'external';
-                        const isInternal = signerType === 'internal';
-                        const SignerIcon = isInternal ? Building2 : User;
+                        const isEstablishment = signerType === 'establishment';
+                        const SignerIcon = isEstablishment ? Building2 : User;
 
-                        const colors = isInternal ? {
-                          border: 'border-emerald-400',
-                          bg: 'bg-emerald-100/80',
-                          text: 'text-emerald-700',
-                          badge: 'bg-emerald-100 text-emerald-700'
-                        } : {
+                        const colors = isEstablishment ? {
                           border: 'border-blue-400',
                           bg: 'bg-blue-100/80',
                           text: 'text-blue-700',
                           badge: 'bg-blue-100 text-blue-700'
+                        } : {
+                          border: 'border-emerald-400',
+                          bg: 'bg-emerald-100/80',
+                          text: 'text-emerald-700',
+                          badge: 'bg-emerald-100 text-emerald-700'
                         };
 
                         return (
@@ -437,16 +437,16 @@ export default function SignContract() {
                         // Get party info for signer type display
                         const party = selectedTemplate?.parties?.find(p => p.id?.toString() === field.role?.toString());
                         const signerType = party?.signerType || 'external';
-                        const isInternal = signerType === 'internal';
-                        const SignerIcon = isInternal ? Building2 : User;
+                        const isEstablishment = signerType === 'establishment';
+                        const SignerIcon = isEstablishment ? Building2 : User;
 
-                        const colors = isInternal ? {
-                          border: 'border-emerald-400',
-                          bg: 'bg-emerald-100/80',
-                          text: 'text-emerald-700',
-                          badge: 'bg-emerald-100 text-emerald-700'
-                        } : {
+                        const colors = isEstablishment ? {
                           border: 'border-blue-400',
+                          bg: 'bg-blue-100/80',
+                          text: 'text-blue-700',
+                          badge: 'bg-blue-100 text-blue-700'
+                        } : {
+                          border: 'border-emerald-400',
                           bg: 'bg-blue-100/80',
                           text: 'text-blue-700',
                           badge: 'bg-blue-100 text-blue-700'

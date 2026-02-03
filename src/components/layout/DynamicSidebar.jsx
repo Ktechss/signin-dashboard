@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { createPageUrl } from '@/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { clientsApi } from '@/services/api';
 import {
   Search,
   BarChart3,
@@ -51,13 +52,6 @@ const platformNavItems = [
   { id: 'platform-settings', labelKey: 'nav.settings', icon: Settings, href: 'PlatformSettings' },
 ];
 
-// Mock clients list - replace with actual data
-const clients = [
-  { id: 1, name: 'ADCB Bank', abbr: 'AD' },
-  { id: 2, name: 'Emirates NBD', abbr: 'EN' },
-  { id: 3, name: 'First Abu Dhabi', abbr: 'FA' },
-  { id: 4, name: 'Mashreq Bank', abbr: 'MB' },
-];
 
 // Build client nav items based on user permissions
 function getClientNavItems(user) {
@@ -123,7 +117,7 @@ function getClientNavItems(user) {
     });
   }
 
-  // Pending Signature - Internal Signer
+  // Pending Signature - Establishment Signer
   if (workflowPerms.canSign) {
     contractChildren.push({
       id: 'pending-signature',
@@ -226,8 +220,23 @@ export default function DynamicSidebar({
   const { t } = useTranslation();
   const { language, toggleLanguage, isRTL } = useLanguage();
   const location = useLocation();
+  const navigate = useNavigate();
   const [expandedItems, setExpandedItems] = useState(['logs', 'Contracts']);
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [clients, setClients] = useState([]);
+
+  // Fetch clients from API
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const data = await clientsApi.getAll();
+        setClients(data);
+      } catch (error) {
+        console.error('Failed to fetch clients:', error);
+      }
+    };
+    fetchClients();
+  }, []);
 
   // Helper to check if a child nav item is active (matches both path and query params)
   const isChildActive = (child) => {
@@ -526,10 +535,14 @@ export default function DynamicSidebar({
             <div className="mt-6 mb-2">
               <div className="flex items-center justify-between px-3 mb-2" style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                 <span className={cn("text-xs uppercase tracking-wider", themeStyles.sectionText)}>{t('sidebar.clients')}</span>
-                <button className={cn(
-                  "w-5 h-5 rounded border flex items-center justify-center transition-colors",
-                  isDarkMode ? "border-gray-600 hover:border-gray-400" : "border-gray-300 hover:border-gray-400"
-                )}>
+                <button
+                  onClick={() => navigate('/ClientOnboarding')}
+                  title={t('sidebar.addClient') || 'Add Client'}
+                  className={cn(
+                    "w-5 h-5 rounded border flex items-center justify-center transition-colors",
+                    isDarkMode ? "border-gray-600 hover:border-gray-400 hover:bg-gray-700" : "border-gray-300 hover:border-gray-400 hover:bg-gray-100"
+                  )}
+                >
                   <Plus className={cn("w-3 h-3", isDarkMode ? "text-gray-400" : "text-gray-500")} />
                 </button>
               </div>

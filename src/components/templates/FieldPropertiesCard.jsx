@@ -4,6 +4,9 @@ import {
   Trash2,
   ChevronDown,
   ChevronRight,
+  Database,
+  Link2,
+  Unlink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,9 +20,22 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { FIELD_TYPES, FIELD_VALIDATIONS } from './FieldOverlay';
+import {
+  ESTABLISHMENT_FIELDS,
+  FIELD_CATEGORIES,
+} from '@/constants/establishmentFields';
 
 // Get field type info from FIELD_TYPES
 const getFieldTypeInfo = (type) => FIELD_TYPES[type] || FIELD_TYPES.text;
+
+// Get e-Channel fields that can be mapped to text fields
+const getMappableEchannelFields = () => {
+  return Object.values(ESTABLISHMENT_FIELDS).map(field => ({
+    id: field.id,
+    label: field.label,
+    category: FIELD_CATEGORIES[field.category]?.label || field.category,
+  }));
+};
 
 /**
  * FieldPropertiesCard - Reusable component for displaying and editing field properties
@@ -34,6 +50,7 @@ const getFieldTypeInfo = (type) => FIELD_TYPES[type] || FIELD_TYPES.text;
  * @param {number} totalPages - Total number of pages (for page selector)
  * @param {Function} onPageChange - Callback when page is changed
  * @param {number} index - Index of the field in the list (for display)
+ * @param {string} signerType - Type of signer this field is assigned to ('establishment' or 'external')
  */
 export default function FieldPropertiesCard({
   field,
@@ -46,11 +63,14 @@ export default function FieldPropertiesCard({
   totalPages = 1,
   onPageChange,
   index = 0,
+  signerType = 'external',
 }) {
   const [activeTab, setActiveTab] = useState('details');
   const [showPositionSize, setShowPositionSize] = useState(false);
 
   const fieldType = getFieldTypeInfo(field.type);
+  const isEstablishment = signerType === 'establishment';
+  const canMapToEchannel = isEstablishment && ['text', 'email', 'phone', 'number', 'date'].includes(field.type);
 
   const handleUpdate = (updates) => {
     onUpdate?.(field.id, updates);
@@ -60,6 +80,22 @@ export default function FieldPropertiesCard({
     handleUpdate({
       validation: { ...field.validation, [key]: value }
     });
+  };
+
+  const handleEchannelMapping = (echannelFieldId) => {
+    if (echannelFieldId === 'none') {
+      // Clear mapping
+      handleUpdate({
+        echannelMapping: null,
+        label: field.label // Keep existing label
+      });
+    } else {
+      const echannelField = ESTABLISHMENT_FIELDS[echannelFieldId];
+      handleUpdate({
+        echannelMapping: echannelFieldId,
+        label: echannelField?.label || field.label // Auto-set label from e-Channel field
+      });
+    }
   };
 
   return (
@@ -82,6 +118,12 @@ export default function FieldPropertiesCard({
           <span className="text-sm font-medium text-slate-700">
             {field.label || fieldType?.label || `Field ${index + 1}`}
           </span>
+          {field.echannelMapping && (
+            <span className="flex items-center gap-1 text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+              <Link2 className="w-2.5 h-2.5" />
+              e-Channel
+            </span>
+          )}
           {totalPages > 1 && (
             <span className="text-xs text-slate-400">
               P{field.page || 1}
@@ -148,6 +190,62 @@ export default function FieldPropertiesCard({
             {/* Details Tab */}
             {activeTab === 'details' && (
               <>
+                {/* E-Channel Data Mapping - Only for establishment signers */}
+                {canMapToEchannel && (
+                  <div className="space-y-1.5 p-2.5 bg-blue-50 rounded-lg border border-blue-100">
+                    <div className="flex items-center gap-1.5">
+                      <Database className="w-3.5 h-3.5 text-blue-600" />
+                      <Label className="text-xs font-medium text-blue-700">e-Channel Data Mapping</Label>
+                    </div>
+                    <p className="text-[10px] text-blue-600 mb-2">
+                      Map this field to auto-fill from company data
+                    </p>
+                    <Select
+                      value={field.echannelMapping || 'none'}
+                      onValueChange={handleEchannelMapping}
+                    >
+                      <SelectTrigger className="h-8 text-sm bg-white">
+                        <SelectValue placeholder="Select e-Channel field..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-60">
+                        <SelectItem value="none">
+                          <div className="flex items-center gap-2">
+                            <Unlink className="w-3 h-3 text-slate-400" />
+                            <span>No mapping (manual entry)</span>
+                          </div>
+                        </SelectItem>
+                        {Object.entries(
+                          getMappableEchannelFields().reduce((groups, field) => {
+                            if (!groups[field.category]) groups[field.category] = [];
+                            groups[field.category].push(field);
+                            return groups;
+                          }, {})
+                        ).map(([category, fields]) => (
+                          <React.Fragment key={category}>
+                            <div className="px-2 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                              {category}
+                            </div>
+                            {fields.map((f) => (
+                              <SelectItem key={f.id} value={f.id}>
+                                <div className="flex items-center gap-2">
+                                  <Link2 className="w-3 h-3 text-blue-500" />
+                                  <span>{f.label}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </React.Fragment>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {field.echannelMapping && (
+                      <p className="text-[10px] text-emerald-600 flex items-center gap-1 mt-1">
+                        <Link2 className="w-2.5 h-2.5" />
+                        Mapped to: {ESTABLISHMENT_FIELDS[field.echannelMapping]?.label}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Field Name */}
                 <div className="space-y-1">
                   <Label className="text-xs text-slate-500">Field Name</Label>

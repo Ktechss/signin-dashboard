@@ -546,6 +546,9 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
               const isSelected = selectedSigner === party.id.toString();
               const isExpanded = expandedSignerCard === party.id.toString() || parties.length === 1;
 
+              // Establishment signers are protected - cannot be deleted or modified
+              const isProtected = party.signerType === 'establishment';
+
               return (
                 <SignerCard
                   key={party.id}
@@ -556,12 +559,13 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                   isExpanded={isExpanded}
                   showChevron={parties.length > 1}
                   selectedFieldId={selectedField}
+                  isProtected={isProtected}
                   onSelect={() => setSelectedSigner(party.id.toString())}
                   onToggleExpand={() => {
                     setExpandedSignerCard(isExpanded && parties.length > 1 ? null : party.id.toString());
                   }}
-                  onDelete={handleDeleteSignerClick}
-                  onUpdate={handleUpdateSigner}
+                  onDelete={isProtected ? undefined : handleDeleteSignerClick}
+                  onUpdate={isProtected ? undefined : handleUpdateSigner}
                   onAddField={addField}
                   onFieldSelect={(field) => {
                     setSelectedField(field.id);
@@ -944,6 +948,8 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
               const availableSigners = Object.keys(groupedFields);
               const currentSigner = selectedSigner || availableSigners[0];
               const currentSignerFields = groupedFields[currentSigner] || [];
+              const currentSignerParty = parties.find(p => p.id.toString() === currentSigner);
+              const currentSignerType = currentSignerParty?.signerType || 'external';
 
               return (
                 <>
@@ -984,6 +990,7 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                           isSelected={selectedField === field.id}
                           isExpanded={expandedSigners[field.id] !== false}
                           totalPages={totalPages}
+                          signerType={currentSignerType}
                           onUpdate={updateField}
                           onDelete={(fieldId) => {
                             updateFields(fields.filter(f => f.id !== fieldId));

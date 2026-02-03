@@ -4,21 +4,21 @@ import { cn } from '@/lib/utils';
 
 // Signer type configurations for visual display
 export const SIGNER_TYPE_CONFIG = {
-  internal: {
-    id: 'internal',
-    label: 'Internal',
+  establishment: {
+    id: 'establishment',
+    label: 'Establishment',
     icon: Building2,
-    color: 'text-emerald-600',
-    bgColor: 'bg-emerald-100',
-    borderColor: 'border-emerald-300',
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-100',
+    borderColor: 'border-blue-300',
   },
   external: {
     id: 'external',
     label: 'External',
     icon: User,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-100',
-    borderColor: 'border-blue-300',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-100',
+    borderColor: 'border-emerald-300',
   },
 };
 
@@ -176,7 +176,7 @@ export function FieldOverlay({
   field,
   documentWidth = 595,
   documentHeight = 842,
-  signerType = null, // 'internal' or 'external'
+  signerType = null, // 'establishment' or 'external'
   signerName = null,
   showSignerBadge = false,
   className

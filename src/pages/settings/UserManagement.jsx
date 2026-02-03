@@ -149,8 +149,8 @@ const rolePresets = {
     adminPermissions: { userManagement: false, apiKeys: false, auditLogs: false, billing: false, blueprints: false, settings: false },
   },
   internalSigner: {
-    label: 'Internal Signer',
-    designation: 'Internal Signer',
+    label: 'Establishment Signer',
+    designation: 'Establishment Signer',
     workflowPermissions: { canCreate: false, canApprove: false, canSend: false, canSign: true, canViewAll: false },
     adminPermissions: { userManagement: false, apiKeys: false, auditLogs: false, billing: false, blueprints: false, settings: false },
   },

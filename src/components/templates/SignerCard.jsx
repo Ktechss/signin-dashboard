@@ -7,14 +7,8 @@ import {
   Trash2,
   Building2,
   User,
+  Lock,
 } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { FIELD_TYPES, getFieldTypeInfo } from './FieldOverlay';
 
 // Dot colors for signer identification
@@ -27,22 +21,22 @@ const DOT_COLORS = [
 
 // Signer types with their configuration
 export const SIGNER_TYPES = {
+  establishment: {
+    id: 'establishment',
+    label: 'Establishment',
+    shortLabel: 'Establishment',
+    icon: Building2,
+    description: 'Company/Organization signing party (auto-filled from e-Channel)',
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+    borderColor: 'border-blue-200',
+  },
   external: {
     id: 'external',
     label: 'External Signer',
     shortLabel: 'External',
     icon: User,
-    description: 'Person outside the organization (e.g., candidate, client)',
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
-  },
-  internal: {
-    id: 'internal',
-    label: 'Internal Signer',
-    shortLabel: 'Internal',
-    icon: Building2,
-    description: 'Signs on behalf of the company (e.g., CTO, Manager)',
+    description: 'Individual signer (e.g., customer, partner, witness)',
     color: 'text-emerald-600',
     bgColor: 'bg-emerald-50',
     borderColor: 'border-emerald-200',
@@ -69,6 +63,7 @@ const SIDEBAR_FIELD_TYPES = [
  * @param {boolean} isExpanded - Whether the card content is expanded
  * @param {boolean} showChevron - Whether to show the expand/collapse chevron
  * @param {string} selectedFieldId - ID of the currently selected field
+ * @param {boolean} isProtected - Whether this signer is protected (cannot be deleted or modified)
  * @param {Function} onSelect - Callback when signer is selected
  * @param {Function} onToggleExpand - Callback to toggle expand state
  * @param {Function} onDelete - Callback when signer is deleted
@@ -86,6 +81,7 @@ export default function SignerCard({
   isExpanded = true,
   showChevron = false,
   selectedFieldId = null,
+  isProtected = false,
   onSelect,
   onToggleExpand,
   onDelete,
@@ -107,10 +103,6 @@ export default function SignerCard({
   const handleDeleteClick = (e) => {
     e.stopPropagation();
     onDelete?.(signer, fields.length);
-  };
-
-  const handleSignerTypeChange = (newType) => {
-    onUpdate?.(signer.id, { signerType: newType });
   };
 
   const handleFieldTypeClick = (e, fieldType) => {
@@ -162,12 +154,18 @@ export default function SignerCard({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400">{fields.length} fields</span>
-            <button
-              onClick={handleDeleteClick}
-              className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+            {isProtected ? (
+              <div className="p-1 text-blue-400" title="This signer is protected and cannot be deleted">
+                <Lock className="w-3.5 h-3.5" />
+              </div>
+            ) : (
+              <button
+                onClick={handleDeleteClick}
+                className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
         {/* Signer Type Badge */}
@@ -186,38 +184,6 @@ export default function SignerCard({
       {/* Fields Content - visible when expanded */}
       {isExpanded && (
         <div className="p-3 pt-0 space-y-3">
-          {/* Signer Type Selector */}
-          <div className="space-y-1.5">
-            <p className="text-xs text-slate-500 font-medium">Signer Role</p>
-            <Select
-              value={signer.signerType || 'external'}
-              onValueChange={handleSignerTypeChange}
-            >
-              <SelectTrigger
-                className="h-8 text-xs"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(SIGNER_TYPES).map((type) => {
-                  const TypeIcon = type.icon;
-                  return (
-                    <SelectItem key={type.id} value={type.id}>
-                      <div className="flex items-center gap-2">
-                        <TypeIcon className={cn('w-3.5 h-3.5', type.color)} />
-                        <div>
-                          <span className="text-xs font-medium">{type.label}</span>
-                        </div>
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-            <p className="text-[10px] text-slate-400">{signerType.description}</p>
-          </div>
-
           {/* Add Field - Grid of field types */}
           <div className="grid grid-cols-3 gap-1.5">
             {SIDEBAR_FIELD_TYPES.map(fieldType => (

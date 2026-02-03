@@ -50,6 +50,15 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
+// ID Type labels
+const ID_TYPE_LABELS = {
+  emirates_id: 'Emirates ID',
+  passport: 'Passport',
+  gcc_id: 'GCC ID',
+  uaekyc_id: 'UAEKYC ID',
+  none: 'No Verification',
+};
+
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -87,7 +96,7 @@ function InfoCard({ icon: Icon, label, value }) {
 }
 
 // Signer Item Component
-function SignerItem({ signer, index, onRemind }) {
+function SignerItem({ signer, index, onRemind, onView }) {
   const isSigned = signer.status === 'signed';
   const initials = signer.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '??';
 
@@ -103,13 +112,15 @@ function SignerItem({ signer, index, onRemind }) {
     });
   };
 
+  const hasIdVerification = signer.idDetails?.idType && signer.idDetails.idType !== 'none';
+
   return (
     <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-slate-200">
       <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
         <span className="text-sm font-medium text-slate-600">{initials}</span>
       </div>
 
-      <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-4 gap-3">
         <div>
           <p className="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Signatory</p>
           <p className="text-sm font-medium text-slate-900">{signer.name}</p>
@@ -120,12 +131,12 @@ function SignerItem({ signer, index, onRemind }) {
         </div>
 
         <div>
-          <p className="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Role</p>
+          <p className="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Type</p>
           <div className="flex items-center gap-1.5 mt-1">
-            {signer.signerType === 'internal' ? (
+            {signer.signerType === 'establishment' ? (
               <>
                 <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                <span className="text-sm text-slate-700">Internal</span>
+                <span className="text-sm text-slate-700">Establishment</span>
               </>
             ) : (
               <>
@@ -134,6 +145,13 @@ function SignerItem({ signer, index, onRemind }) {
               </>
             )}
           </div>
+        </div>
+
+        <div>
+          <p className="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">ID Verification</p>
+          <p className="text-sm text-slate-700 mt-1">
+            {hasIdVerification ? ID_TYPE_LABELS[signer.idDetails.idType] : 'None'}
+          </p>
         </div>
 
         <div>
@@ -156,7 +174,7 @@ function SignerItem({ signer, index, onRemind }) {
           {isSigned ? 'Signed' : 'Pending'}
         </span>
 
-        <Button variant="outline" size="sm" className="gap-1.5 text-slate-600">
+        <Button variant="outline" size="sm" className="gap-1.5 text-slate-600" onClick={() => onView?.(signer)}>
           <Eye className="w-3.5 h-3.5" />
           View
         </Button>
@@ -178,7 +196,10 @@ function SignerItem({ signer, index, onRemind }) {
               <Copy className="w-4 h-4 mr-2" />
               Copy Email
             </DropdownMenuItem>
-            <DropdownMenuItem>View Details</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onView?.(signer)}>
+              <Eye className="w-4 h-4 mr-2" />
+              View Details
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -277,11 +298,19 @@ export default function ContractDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('signers');
   const [documentOpen, setDocumentOpen] = useState(false);
+  const [selectedSigner, setSelectedSigner] = useState(null);
+  const [signerSheetOpen, setSignerSheetOpen] = useState(false);
 
   // Document viewer state
   const [numPages, setNumPages] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(100);
+
+  // View signer details
+  const handleViewSigner = (signer) => {
+    setSelectedSigner(signer);
+    setSignerSheetOpen(true);
+  };
 
   // Load contract data
   useEffect(() => {
@@ -490,6 +519,7 @@ export default function ContractDetail() {
                 signer={signer}
                 index={index}
                 onRemind={handleSendReminder}
+                onView={handleViewSigner}
               />
             ))}
             {(!contract.signers || contract.signers.length === 0) && (
@@ -654,6 +684,207 @@ export default function ContractDetail() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Signer Details Modal */}
+      <Dialog open={signerSheetOpen} onOpenChange={setSignerSheetOpen}>
+        <DialogContent className="max-w-2xl p-0 gap-0">
+          {selectedSigner && (
+            <>
+              {/* Header */}
+              <div className="p-6 pb-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center">
+                    <span className="text-xl font-medium text-white">
+                      {selectedSigner.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '??'}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-1">
+                      <h2 className="text-xl font-semibold text-slate-900">{selectedSigner.name}</h2>
+                      <span className={cn(
+                        'text-xs px-2 py-0.5 rounded-full',
+                        selectedSigner.status === 'signed'
+                          ? 'bg-slate-100 text-slate-700'
+                          : 'bg-slate-100 text-slate-500'
+                      )}>
+                        {selectedSigner.status === 'signed' ? 'Signed' : 'Pending'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-500">{selectedSigner.email}</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {selectedSigner.signerType === 'establishment' ? 'Establishment' : 'External Signer'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content Grid */}
+              <div className="px-6 pb-6">
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Left Column */}
+                  <div className="space-y-5">
+                    {/* Contact Info */}
+                    <div>
+                      <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">Contact</h4>
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-xs text-slate-400">Email</p>
+                          <p className="text-sm text-slate-900">{selectedSigner.email}</p>
+                        </div>
+                        {selectedSigner.phone && (
+                          <div>
+                            <p className="text-xs text-slate-400">Phone</p>
+                            <p className="text-sm text-slate-900">{selectedSigner.phone}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Signing Info */}
+                    <div>
+                      <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">Signing</h4>
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-xs text-slate-400">Status</p>
+                          <p className="text-sm text-slate-900">
+                            {selectedSigner.status === 'signed' ? 'Completed' : 'Awaiting signature'}
+                          </p>
+                        </div>
+                        {selectedSigner.signedAt && (
+                          <div>
+                            <p className="text-xs text-slate-400">Signed At</p>
+                            <p className="text-sm text-slate-900">
+                              {new Date(selectedSigner.signedAt).toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true,
+                              })}
+                            </p>
+                          </div>
+                        )}
+                        {selectedSigner.ipAddress && (
+                          <div>
+                            <p className="text-xs text-slate-400">IP Address</p>
+                            <p className="text-sm text-slate-900 font-mono">{selectedSigner.ipAddress}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column - ID Verification */}
+                  <div>
+                    <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">ID Verification</h4>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs text-slate-400">Type</p>
+                        <p className="text-sm text-slate-900">
+                          {selectedSigner.idDetails?.idType && selectedSigner.idDetails.idType !== 'none'
+                            ? ID_TYPE_LABELS[selectedSigner.idDetails.idType]
+                            : 'No verification'}
+                        </p>
+                      </div>
+
+                      {/* Emirates ID */}
+                      {selectedSigner.idDetails?.idType === 'emirates_id' && (
+                        <div>
+                          <p className="text-xs text-slate-400">Emirates ID Number</p>
+                          <p className="text-sm text-slate-900 font-mono">
+                            {selectedSigner.idDetails.emiratesId || '-'}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Passport */}
+                      {selectedSigner.idDetails?.idType === 'passport' && (
+                        <>
+                          <div>
+                            <p className="text-xs text-slate-400">Country</p>
+                            <p className="text-sm text-slate-900">
+                              {selectedSigner.idDetails.passport?.country || '-'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400">Passport Type</p>
+                            <p className="text-sm text-slate-900">
+                              {selectedSigner.idDetails.passport?.type || '-'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400">Passport Number</p>
+                            <p className="text-sm text-slate-900 font-mono">
+                              {selectedSigner.idDetails.passport?.number || '-'}
+                            </p>
+                          </div>
+                        </>
+                      )}
+
+                      {/* GCC ID */}
+                      {selectedSigner.idDetails?.idType === 'gcc_id' && (
+                        <>
+                          <div>
+                            <p className="text-xs text-slate-400">Country</p>
+                            <p className="text-sm text-slate-900">
+                              {selectedSigner.idDetails.gccId?.country || '-'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400">ID Number</p>
+                            <p className="text-sm text-slate-900 font-mono">
+                              {selectedSigner.idDetails.gccId?.number || '-'}
+                            </p>
+                          </div>
+                        </>
+                      )}
+
+                      {/* UAEKYC ID */}
+                      {selectedSigner.idDetails?.idType === 'uaekyc_id' && (
+                        <div>
+                          <p className="text-xs text-slate-400">UAEKYC ID</p>
+                          <p className="text-sm text-slate-900 font-mono">
+                            {selectedSigner.idDetails.uaekycId || '-'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(selectedSigner.email);
+                    toast.success('Email copied');
+                  }}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy Email
+                </Button>
+                {selectedSigner.status !== 'signed' && (
+                  <Button
+                    size="sm"
+                    className="bg-slate-900 hover:bg-slate-800"
+                    onClick={() => {
+                      handleSendReminder(selectedSigner);
+                      setSignerSheetOpen(false);
+                    }}
+                  >
+                    <Bell className="w-4 h-4 mr-2" />
+                    Send Reminder
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Document Viewer Modal */}
       <Dialog open={documentOpen} onOpenChange={setDocumentOpen}>

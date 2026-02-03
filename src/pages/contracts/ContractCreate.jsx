@@ -9,6 +9,8 @@ import {
   CONTRACT_STATUS_CONFIG,
   getDocumentUrl,
 } from '@/utils/templateStorage';
+import { echannelApi } from '@/services/api';
+import { useAuth } from '@/pages/index';
 import { Document, Page, pdfjs } from 'react-pdf';
 import {
   ArrowLeft,
@@ -35,6 +37,9 @@ import {
   Check,
   Loader2,
   Table,
+  Plus,
+  Trash2,
+  MapPin,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +49,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { SIGNER_TYPES } from '@/components/templates/SignerCard';
 import { FIELD_TYPES } from '@/components/templates/FieldOverlay';
+import EstablishmentFieldsDisplay from '@/components/contracts/EstablishmentFieldsDisplay';
+import { DEFAULT_ESTABLISHMENT_FIELDS, ESTABLISHMENT_FIELDS, getValueFromPath } from '@/constants/establishmentFields';
 import { Progress } from '@/components/ui/progress';
 import {
   Select,
@@ -261,6 +268,7 @@ export default function ContractCreate() {
   const [searchParams] = useSearchParams();
   const preselectedBlueprintId = searchParams.get('blueprintId');
   const fileInputRef = useRef(null);
+  const { selectedClient } = useAuth();
 
   // Mode: 'single' or 'bulk'
   const [mode, setMode] = useState('single');
@@ -271,6 +279,13 @@ export default function ContractCreate() {
   const [sampleBlueprints, setSampleBlueprints] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+
+  // E-Channel company data
+  const [companyData, setCompanyData] = useState(null);
+  const [isLoadingCompany, setIsLoadingCompany] = useState(false);
+
+  // Establishments (first one is always the company, rest are additional signers)
+  const [establishments, setEstablishments] = useState([]);
 
   // Single contract data
   const [contractData, setContractData] = useState({
@@ -291,6 +306,48 @@ export default function ContractCreate() {
   const [csvErrors, setCsvErrors] = useState([]);
   const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, status: 'idle' });
   const [bulkResults, setBulkResults] = useState([]);
+
+  // Fetch e-Channel company data
+  useEffect(() => {
+    const fetchCompanyData = async () => {
+      if (!selectedClient?.id) return;
+
+      setIsLoadingCompany(true);
+      try {
+        const data = await echannelApi.getByClient(selectedClient.id);
+        setCompanyData(data);
+
+        // Initialize establishments with company as Establishment 1
+        setEstablishments([{
+          id: 'establishment-1',
+          type: 'establishment',
+          name: data.companyName,
+          tradeName: data.tradeName,
+          establishmentNumber: data.establishmentNumber,
+          licenseNumber: data.licenseNumber,
+          address: data.address?.fullAddress,
+          representedBy: data.owner?.name || '',
+          representedByEmail: data.owner?.email || '',
+          representedByPhone: data.owner?.phone || '',
+          emiratesId: data.owner?.emiratesId || '',
+          isCompany: true,
+        }]);
+      } catch (error) {
+        console.error('Error fetching company data:', error);
+        // Initialize with empty establishment if no data
+        setEstablishments([{
+          id: 'establishment-1',
+          type: 'establishment',
+          name: selectedClient?.name || 'Establishment 1',
+          isCompany: true,
+        }]);
+      } finally {
+        setIsLoadingCompany(false);
+      }
+    };
+
+    fetchCompanyData();
+  }, [selectedClient]);
 
   // Load blueprints
   useEffect(() => {
@@ -327,6 +384,32 @@ export default function ContractCreate() {
 
     loadBlueprints();
   }, [preselectedBlueprintId]);
+
+  // Add new signer
+  const addSigner = () => {
+    const newId = `signer-${Date.now()}`;
+    setEstablishments(prev => [...prev, {
+      id: newId,
+      type: 'signer',
+      name: '',
+      email: '',
+      phone: '',
+      emiratesId: '',
+      isCompany: false,
+    }]);
+  };
+
+  // Update establishment/signer
+  const updateEstablishment = (id, field, value) => {
+    setEstablishments(prev => prev.map(est =>
+      est.id === id ? { ...est, [field]: value } : est
+    ));
+  };
+
+  // Remove signer (cannot remove Establishment 1)
+  const removeSigner = (id) => {
+    setEstablishments(prev => prev.filter(est => est.id !== id || est.isCompany));
+  };
 
   const allBlueprints = [...blueprints, ...sampleBlueprints];
 
@@ -537,7 +620,51 @@ export default function ContractCreate() {
 
     setIsCreating(true);
     try {
-      const contract = await createContractFromBlueprint(selectedBlueprint, contractData);
+      // Helper to transform idDetails with country labels
+      const transformIdDetails = (idDetails) => {
+        if (!idDetails) return { idType: 'none' };
+
+        const transformed = { ...idDetails };
+
+        // Convert passport country code to label
+        if (transformed.passport?.country) {
+          const countryObj = COUNTRIES.find(c => c.value === transformed.passport.country);
+          transformed.passport = {
+            ...transformed.passport,
+            country: countryObj?.label || transformed.passport.country,
+          };
+        }
+
+        // Convert GCC country code to label
+        if (transformed.gccId?.country) {
+          const countryObj = GCC_COUNTRIES.find(c => c.value === transformed.gccId.country);
+          transformed.gccId = {
+            ...transformed.gccId,
+            country: countryObj?.label || transformed.gccId.country,
+          };
+        }
+
+        return transformed;
+      };
+
+      // Construct signers array with embedded idDetails
+      const signers = (selectedBlueprint.parties || []).map(party => ({
+        id: party.id,
+        name: contractData.signerNames[party.id] || '',
+        email: contractData.signerEmails[party.id] || '',
+        role: party.name || party.role || 'Signer',
+        signerType: party.type || 'external',
+        status: 'pending',
+        idDetails: transformIdDetails(contractData.signerIdDetails[party.id]),
+      }));
+
+      // Build contract data with properly structured signers
+      const finalContractData = {
+        ...contractData,
+        signers,
+      };
+
+      const contract = await createContractFromBlueprint(selectedBlueprint, finalContractData);
       toast.success('Contract created successfully!', {
         description: `Contract "${contract.name}" is ready.`,
       });
@@ -1100,370 +1227,153 @@ export default function ContractCreate() {
               </div>
             </div>
 
-            {/* Signers */}
+            {/* Establishments & Signers */}
             <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h3 className="font-semibold text-slate-900 mb-4">Signer Details</h3>
-              <p className="text-sm text-slate-500 mb-6">
-                Enter the details for each signer defined in the blueprint.
-              </p>
-
-              <div className="space-y-6">
-                {(selectedBlueprint?.parties || []).map((party, index) => {
-                  const signerType = SIGNER_TYPES[party.signerType] || SIGNER_TYPES.external;
-                  const SignerIcon = signerType.icon;
-                  const signerFields = getFieldsBySigner(party.id);
-
-                  return (
-                    <div
-                      key={party.id}
-                      className="p-5 rounded-xl border border-slate-200 bg-white"
-                    >
-                      {/* Signer Header */}
-                      <div className="flex items-center gap-3 mb-5 pb-4 border-b border-slate-100">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-100">
-                          <SignerIcon className="w-5 h-5 text-slate-600" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-slate-900">{party.name}</p>
-                          <p className="text-xs text-slate-500">{signerType.label}</p>
-                        </div>
-                      </div>
-
-                      {/* Section 1: Signer Identification */}
-                      <div className="mb-6">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Mail className="w-4 h-4 text-slate-500" />
-                          <h4 className="text-sm font-medium text-slate-900">Signer Identification</h4>
-                          <span className="text-xs text-slate-400">— used to send signing link & verify identity</span>
-                        </div>
-                        <div className="p-4 bg-slate-50 rounded-lg space-y-4">
-                          {/* Basic Info */}
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label className="text-xs font-medium text-slate-700">Full Name *</Label>
-                              <Input
-                                value={contractData.signerNames[party.id] || ''}
-                                onChange={(e) => handleSignerChange(party.id, 'signerNames', e.target.value)}
-                                placeholder={`Enter ${party.name}'s full name`}
-                                className="bg-white"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-xs font-medium text-slate-700">Email Address *</Label>
-                              <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                <Input
-                                  type="email"
-                                  value={contractData.signerEmails[party.id] || ''}
-                                  onChange={(e) => handleSignerChange(party.id, 'signerEmails', e.target.value)}
-                                  placeholder="email@example.com"
-                                  className="pl-9 bg-white"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* ID Verification */}
-                          <div className="pt-3 border-t border-slate-200">
-                            <div className="grid grid-cols-4 gap-4">
-                              <div className="space-y-2">
-                                <Label className="text-xs font-medium text-slate-700">ID Type</Label>
-                                <Select
-                                  value={contractData.signerIdDetails[party.id]?.idType || 'none'}
-                                  onValueChange={(value) => handleSignerIdChange(party.id, 'idType', value)}
-                                >
-                                  <SelectTrigger className="bg-white">
-                                    <SelectValue placeholder="Select" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {Object.values(ID_TYPES).map((type) => (
-                                      <SelectItem key={type.id} value={type.id}>
-                                        {type.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              {/* Emirates ID */}
-                              {contractData.signerIdDetails[party.id]?.idType === 'emirates_id' && (
-                                <div className="space-y-2 col-span-3">
-                                  <Label className="text-xs font-medium text-slate-700">Emirates ID Number</Label>
-                                  <Input
-                                    value={contractData.signerIdDetails[party.id]?.emiratesId || ''}
-                                    onChange={(e) => handleSignerIdChange(party.id, 'emiratesId', e.target.value)}
-                                    placeholder="784-XXXX-XXXXXXX-X"
-                                    className="bg-white"
-                                  />
-                                </div>
-                              )}
-
-                              {/* Passport */}
-                              {contractData.signerIdDetails[party.id]?.idType === 'passport' && (
-                                <>
-                                  <div className="space-y-2">
-                                    <Label className="text-xs font-medium text-slate-700">Country</Label>
-                                    <Popover>
-                                      <PopoverTrigger asChild>
-                                        <Button
-                                          variant="outline"
-                                          role="combobox"
-                                          className="w-full justify-between bg-white font-normal"
-                                        >
-                                          {contractData.signerIdDetails[party.id]?.passport?.country
-                                            ? COUNTRIES.find(c => c.value === contractData.signerIdDetails[party.id]?.passport?.country)?.label
-                                            : "Select country"}
-                                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-[200px] p-0">
-                                        <Command>
-                                          <CommandInput placeholder="Search country..." />
-                                          <CommandList>
-                                            <CommandEmpty>No country found.</CommandEmpty>
-                                            <CommandGroup>
-                                              {COUNTRIES.map((country) => (
-                                                <CommandItem
-                                                  key={country.value}
-                                                  value={country.label}
-                                                  onSelect={() => handleSignerIdNestedChange(party.id, 'passport', 'country', country.value)}
-                                                >
-                                                  {country.label}
-                                                </CommandItem>
-                                              ))}
-                                            </CommandGroup>
-                                          </CommandList>
-                                        </Command>
-                                      </PopoverContent>
-                                    </Popover>
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label className="text-xs font-medium text-slate-700">Type</Label>
-                                    <Input
-                                      value={contractData.signerIdDetails[party.id]?.passport?.type || ''}
-                                      onChange={(e) => handleSignerIdNestedChange(party.id, 'passport', 'type', e.target.value)}
-                                      placeholder="e.g., Regular"
-                                      className="bg-white"
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label className="text-xs font-medium text-slate-700">Number</Label>
-                                    <Input
-                                      value={contractData.signerIdDetails[party.id]?.passport?.number || ''}
-                                      onChange={(e) => handleSignerIdNestedChange(party.id, 'passport', 'number', e.target.value)}
-                                      placeholder="e.g., AB1234567"
-                                      className="bg-white"
-                                    />
-                                  </div>
-                                </>
-                              )}
-
-                              {/* GCC ID */}
-                              {contractData.signerIdDetails[party.id]?.idType === 'gcc_id' && (
-                                <>
-                                  <div className="space-y-2">
-                                    <Label className="text-xs font-medium text-slate-700">Country</Label>
-                                    <Select
-                                      value={contractData.signerIdDetails[party.id]?.gccId?.country || ''}
-                                      onValueChange={(value) => handleSignerIdNestedChange(party.id, 'gccId', 'country', value)}
-                                    >
-                                      <SelectTrigger className="bg-white">
-                                        <SelectValue placeholder="Select" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {GCC_COUNTRIES.map((country) => (
-                                          <SelectItem key={country.value} value={country.value}>
-                                            {country.label}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div className="space-y-2 col-span-2">
-                                    <Label className="text-xs font-medium text-slate-700">ID Number</Label>
-                                    <Input
-                                      value={contractData.signerIdDetails[party.id]?.gccId?.number || ''}
-                                      onChange={(e) => handleSignerIdNestedChange(party.id, 'gccId', 'number', e.target.value)}
-                                      placeholder="Enter ID number"
-                                      className="bg-white"
-                                    />
-                                  </div>
-                                </>
-                              )}
-
-                              {/* UAEKYC ID */}
-                              {contractData.signerIdDetails[party.id]?.idType === 'uaekyc_id' && (
-                                <div className="space-y-2 col-span-3">
-                                  <Label className="text-xs font-medium text-slate-700">UAEKYC ID</Label>
-                                  <Input
-                                    value={contractData.signerIdDetails[party.id]?.uaekycId || ''}
-                                    onChange={(e) => handleSignerIdChange(party.id, 'uaekycId', e.target.value)}
-                                    placeholder="Enter UAEKYC ID"
-                                    className="bg-white"
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section 2: Contract Details */}
-                      {signerFields.length > 0 && (() => {
-                        // Group fields by label+type to avoid duplicate entries
-                        const groupedFields = signerFields.reduce((acc, field) => {
-                          const fieldTypeConfig = FIELD_TYPES[field.type];
-                          const label = field.label || field.placeholder || fieldTypeConfig?.label || field.type;
-                          const groupKey = `${field.type}::${label}`;
-
-                          if (!acc[groupKey]) {
-                            acc[groupKey] = {
-                              type: field.type,
-                              label,
-                              required: field.required,
-                              placeholder: field.placeholder,
-                              fields: [],
-                            };
-                          }
-                          acc[groupKey].fields.push(field);
-                          // If any field in group is required, mark group as required
-                          if (field.required) acc[groupKey].required = true;
-                          return acc;
-                        }, {});
-
-                        const groupedEntries = Object.entries(groupedFields);
-
-                        // Handler to update all fields in a group
-                        const handleGroupFieldChange = (fields, value) => {
-                          fields.forEach(field => handleFieldChange(field.id, value));
-                        };
-
-                        return (
-                          <div>
-                            <div className="flex items-center gap-2 mb-3">
-                              <ClipboardCheck className="w-4 h-4 text-slate-500" />
-                              <h4 className="text-sm font-medium text-slate-900">Contract Details</h4>
-                              <span className="text-xs text-slate-400">— fields to be filled in the contract</span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg">
-                              {groupedEntries.map(([groupKey, group]) => {
-                                const fieldTypeConfig = FIELD_TYPES[group.type];
-                                const FieldIcon = fieldTypeConfig?.icon || Type;
-                                const firstField = group.fields[0];
-                                const fieldCount = group.fields.length;
-                                const value = contractData.fieldValues[firstField.id] || '';
-
-                                // Render input based on field type
-                                const renderGroupInput = () => {
-                                  switch (group.type) {
-                                    case 'signature':
-                                    case 'initials':
-                                      return (
-                                        <div className="flex items-center gap-2 text-slate-500 text-sm py-2 px-3 bg-white rounded-lg border border-slate-200">
-                                          <Pen className="w-4 h-4" />
-                                          <span>Will be collected during signing</span>
-                                        </div>
-                                      );
-                                    case 'checkbox':
-                                      return (
-                                        <div className="flex items-center gap-2">
-                                          <Checkbox
-                                            id={groupKey}
-                                            checked={value === true}
-                                            onCheckedChange={(checked) => handleGroupFieldChange(group.fields, checked)}
-                                          />
-                                          <Label htmlFor={groupKey} className="text-sm text-slate-600">
-                                            {group.placeholder || 'Check if applicable'}
-                                          </Label>
-                                        </div>
-                                      );
-                                    case 'date':
-                                      return (
-                                        <Input
-                                          type="date"
-                                          value={value}
-                                          onChange={(e) => handleGroupFieldChange(group.fields, e.target.value)}
-                                          className="bg-white"
-                                        />
-                                      );
-                                    case 'number':
-                                      return (
-                                        <Input
-                                          type="number"
-                                          value={value}
-                                          onChange={(e) => handleGroupFieldChange(group.fields, e.target.value)}
-                                          placeholder={group.placeholder || 'Enter number'}
-                                          className="bg-white"
-                                        />
-                                      );
-                                    case 'email':
-                                      return (
-                                        <div className="relative">
-                                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                          <Input
-                                            type="email"
-                                            value={value}
-                                            onChange={(e) => handleGroupFieldChange(group.fields, e.target.value)}
-                                            placeholder={group.placeholder || 'email@example.com'}
-                                            className="pl-9 bg-white"
-                                          />
-                                        </div>
-                                      );
-                                    case 'phone':
-                                      return (
-                                        <div className="relative">
-                                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                          <Input
-                                            type="tel"
-                                            value={value}
-                                            onChange={(e) => handleGroupFieldChange(group.fields, e.target.value)}
-                                            placeholder={group.placeholder || '+971 XX XXX XXXX'}
-                                            className="pl-9 bg-white"
-                                          />
-                                        </div>
-                                      );
-                                    default:
-                                      return (
-                                        <Input
-                                          type="text"
-                                          value={value}
-                                          onChange={(e) => handleGroupFieldChange(group.fields, e.target.value)}
-                                          placeholder={group.placeholder || 'Enter text'}
-                                          className="bg-white"
-                                        />
-                                      );
-                                  }
-                                };
-
-                                return (
-                                  <div key={groupKey} className="space-y-2">
-                                    <Label className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
-                                      <FieldIcon className="w-3 h-3 text-slate-400" />
-                                      {group.label}
-                                      {group.required && <span className="text-red-500">*</span>}
-                                      {fieldCount > 1 && (
-                                        <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full ml-1">
-                                          ×{fieldCount}
-                                        </span>
-                                      )}
-                                    </Label>
-                                    {renderGroupInput()}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  );
-                })}
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold text-slate-900">Signing Parties</h3>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Company establishment and additional signers for this contract
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addSigner}
+                  className="gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Signer
+                </Button>
               </div>
 
-              {(!selectedBlueprint?.parties || selectedBlueprint.parties.length === 0) && (
+              {isLoadingCompany ? (
+                <div className="text-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
+                  <p className="text-sm text-slate-500 mt-2">Loading company data...</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {establishments.map((establishment, index) => (
+                    <div
+                      key={establishment.id}
+                      className={cn(
+                        "p-5 rounded-xl border",
+                        establishment.isCompany
+                          ? "border-blue-200 bg-blue-50/50"
+                          : "border-slate-200 bg-white"
+                      )}
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center",
+                            establishment.isCompany ? "bg-blue-100" : "bg-slate-100"
+                          )}>
+                            {establishment.isCompany ? (
+                              <Building2 className="w-5 h-5 text-blue-600" />
+                            ) : (
+                              <User className="w-5 h-5 text-slate-600" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-900">
+                              {establishment.isCompany ? `Establishment ${index + 1}` : `Signer ${index}`}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {establishment.isCompany ? 'Company / Organization' : 'Individual Signer'}
+                            </p>
+                          </div>
+                        </div>
+                        {!establishment.isCompany && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeSigner(establishment.id)}
+                            className="text-slate-400 hover:text-red-500"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+
+                      {establishment.isCompany ? (
+                        /* Establishment (Company) Fields - Dynamic based on blueprint field mappings */
+                        <EstablishmentFieldsDisplay
+                          companyData={companyData}
+                          establishment={establishment}
+                          configuredFields={(() => {
+                            // Extract e-Channel mappings from template fields
+                            const mappedFieldIds = (selectedBlueprint?.fields || [])
+                              .filter(f => f.echannelMapping)
+                              .map(f => f.echannelMapping);
+                            // Always include basic required fields + any mapped fields
+                            const uniqueFields = [...new Set([...DEFAULT_ESTABLISHMENT_FIELDS, ...mappedFieldIds])];
+                            return uniqueFields.length > 0 ? uniqueFields : DEFAULT_ESTABLISHMENT_FIELDS;
+                          })()}
+                          representatives={companyData?.representatives || []}
+                          onUpdate={(key, value) => updateEstablishment(establishment.id, key, value)}
+                        />
+                      ) : (
+                        /* Individual Signer Fields */
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-slate-700">Full Name *</Label>
+                            <Input
+                              value={establishment.name || ''}
+                              onChange={(e) => updateEstablishment(establishment.id, 'name', e.target.value)}
+                              placeholder="Enter signer's full name"
+                              className="bg-white"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-slate-700">Email Address *</Label>
+                            <div className="relative">
+                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                              <Input
+                                type="email"
+                                value={establishment.email || ''}
+                                onChange={(e) => updateEstablishment(establishment.id, 'email', e.target.value)}
+                                placeholder="email@example.com"
+                                className="pl-9 bg-white"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-slate-700">Phone Number</Label>
+                            <div className="relative">
+                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                              <Input
+                                value={establishment.phone || ''}
+                                onChange={(e) => updateEstablishment(establishment.id, 'phone', e.target.value)}
+                                placeholder="+971 XX XXX XXXX"
+                                className="pl-9 bg-white"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-slate-700">Emirates ID</Label>
+                            <Input
+                              value={establishment.emiratesId || ''}
+                              onChange={(e) => updateEstablishment(establishment.id, 'emiratesId', e.target.value)}
+                              placeholder="784-XXXX-XXXXXXX-X"
+                              className="bg-white"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {establishments.length === 0 && !isLoadingCompany && (
                 <div className="text-center py-8 text-slate-500">
-                  <Users className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                  <p>No signers defined in this blueprint</p>
+                  <Building2 className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                  <p>No company data available</p>
                 </div>
               )}
             </div>

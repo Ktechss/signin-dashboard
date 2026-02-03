@@ -17,7 +17,7 @@ import { Building2, Send, Users, UserCheck, ArrowRight } from 'lucide-react';
  *
  * This handles the workflow:
  * 1. Approvers review the contract
- * 2. Internal signers sign on behalf of company
+ * 2. Establishment signers sign on behalf of company
  * 3. Then contract is sent to external signers
  */
 export default function InternalFlowSettings({ value, onChange }) {
@@ -34,8 +34,8 @@ export default function InternalFlowSettings({ value, onChange }) {
             <Building2 className="w-5 h-5 text-slate-600" />
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-700">Internal Signing Flow</p>
-            <p className="text-xs text-slate-500">Enable internal review and signing before external</p>
+            <p className="text-sm font-medium text-slate-700">Establishment Signing Flow</p>
+            <p className="text-xs text-slate-500">Enable establishment review and signing before external</p>
           </div>
         </div>
         <Switch
@@ -55,9 +55,9 @@ export default function InternalFlowSettings({ value, onChange }) {
                 Approvers
               </div>
               <ArrowRight className="w-4 h-4 text-blue-400" />
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                 <Building2 className="w-3.5 h-3.5" />
-                Internal Signers
+                Establishment Signers
               </div>
               <ArrowRight className="w-4 h-4 text-blue-400" />
               <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
@@ -116,8 +116,8 @@ export default function InternalFlowSettings({ value, onChange }) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="contract_creator">Contract Creator</SelectItem>
-                    <SelectItem value="last_internal_signer">Last Internal Signer</SelectItem>
-                    <SelectItem value="any_internal_signer">Any Internal Signer</SelectItem>
+                    <SelectItem value="last_internal_signer">Last Establishment Signer</SelectItem>
+                    <SelectItem value="any_internal_signer">Any Establishment Signer</SelectItem>
                     <SelectItem value="admin">Admin Only</SelectItem>
                     <SelectItem value="specific_role">Specific Role (HR, Manager, etc.)</SelectItem>
                   </SelectContent>
@@ -143,8 +143,8 @@ export default function InternalFlowSettings({ value, onChange }) {
 
             <div className="flex items-center justify-between py-2">
               <div>
-                <p className="text-sm font-medium text-slate-700">Notify Creator on Internal Completion</p>
-                <p className="text-xs text-slate-500">Send email when all internal signatures are collected</p>
+                <p className="text-sm font-medium text-slate-700">Notify Creator on Establishment Completion</p>
+                <p className="text-xs text-slate-500">Send email when all establishment signatures are collected</p>
               </div>
               <Switch
                 checked={value.notifyOnInternalComplete}
@@ -154,8 +154,8 @@ export default function InternalFlowSettings({ value, onChange }) {
 
             <div className="flex items-center justify-between py-2">
               <div>
-                <p className="text-sm font-medium text-slate-700">Notify Internal Signers on Approval</p>
-                <p className="text-xs text-slate-500">Alert internal signers when approvers approve</p>
+                <p className="text-sm font-medium text-slate-700">Notify Establishment Signers on Approval</p>
+                <p className="text-xs text-slate-500">Alert establishment signers when approvers approve</p>
               </div>
               <Switch
                 checked={value.notifyInternalOnApproval}

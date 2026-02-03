@@ -134,13 +134,13 @@ export default function TemplateDetail() {
   // Helper function to get signer info
   const getSignerInfo = (party, index) => {
     const signerType = party.signerType || 'external';
-    const isInternal = signerType === 'internal';
+    const isEstablishment = signerType === 'establishment';
     return {
-      icon: isInternal ? Building2 : User,
-      label: isInternal ? 'Internal' : 'External',
-      bgColor: isInternal ? 'bg-emerald-100' : 'bg-blue-100',
-      textColor: isInternal ? 'text-emerald-700' : 'text-blue-700',
-      borderColor: isInternal ? 'border-l-emerald-500' : 'border-l-blue-500'
+      icon: isEstablishment ? Building2 : User,
+      label: isEstablishment ? 'Establishment' : 'External',
+      bgColor: isEstablishment ? 'bg-blue-100' : 'bg-emerald-100',
+      textColor: isEstablishment ? 'text-blue-700' : 'text-emerald-700',
+      borderColor: isEstablishment ? 'border-l-blue-500' : 'border-l-emerald-500'
     };
   };
 
@@ -471,19 +471,19 @@ export default function TemplateDetail() {
                   <div>
                     <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-2">Signers</p>
                     <div className="flex gap-2">
-                      <div className="flex-1 bg-emerald-50/80 rounded-xl p-3 text-center">
-                        <Building2 className="w-4 h-4 text-emerald-600 mx-auto" />
-                        <p className="text-xl font-semibold text-emerald-700 mt-1">
-                          {displayData.parties?.filter(p => p.signerType === 'internal').length || 0}
-                        </p>
-                        <p className="text-[10px] text-emerald-600 uppercase tracking-wide">Internal</p>
-                      </div>
                       <div className="flex-1 bg-blue-50/80 rounded-xl p-3 text-center">
-                        <User className="w-4 h-4 text-blue-600 mx-auto" />
+                        <Building2 className="w-4 h-4 text-blue-600 mx-auto" />
                         <p className="text-xl font-semibold text-blue-700 mt-1">
-                          {displayData.parties?.filter(p => p.signerType !== 'internal').length || 0}
+                          {displayData.parties?.filter(p => p.signerType === 'establishment').length || 0}
                         </p>
-                        <p className="text-[10px] text-blue-600 uppercase tracking-wide">External</p>
+                        <p className="text-[10px] text-blue-600 uppercase tracking-wide">Establishment</p>
+                      </div>
+                      <div className="flex-1 bg-emerald-50/80 rounded-xl p-3 text-center">
+                        <User className="w-4 h-4 text-emerald-600 mx-auto" />
+                        <p className="text-xl font-semibold text-emerald-700 mt-1">
+                          {displayData.parties?.filter(p => p.signerType !== 'establishment').length || 0}
+                        </p>
+                        <p className="text-[10px] text-emerald-600 uppercase tracking-wide">External</p>
                       </div>
                     </div>
                   </div>

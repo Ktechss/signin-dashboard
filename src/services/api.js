@@ -126,6 +126,16 @@ export const channelsApi = {
 export const clientsApi = {
   getAll: () => request('/clients'),
   getById: (id) => request(`/clients/${id}`),
+  create: (data) => request('/clients', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id, data) => request(`/clients/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id) => request(`/clients/${id}`, { method: 'DELETE' }),
+  onboard: (data) => request('/clients/onboard', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// E-Channel API (Government Company Data)
+export const echannelApi = {
+  getByLicense: (licenseNumber) => request(`/echannel/license/${licenseNumber}`),
+  getByClient: (clientId) => request(`/echannel/client/${clientId}`),
 };
 
 // Audit Logs API

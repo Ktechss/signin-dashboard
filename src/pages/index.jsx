@@ -28,6 +28,9 @@ import BlueprintGallery from "./templates/BlueprintGallery";
 import Analytics from "./analytics/Analytics";
 import PlatformAnalytics from "./analytics/PlatformAnalytics";
 
+// Client pages
+import ClientOnboarding from "./clients/ClientOnboarding";
+
 // Settings pages
 import Settings from "./settings/Settings";
 import UserManagement from "./settings/UserManagement";
@@ -74,6 +77,7 @@ const PAGES = {
     PlatformAnalytics: PlatformAnalytics,
     PlatformAuditLogs: PlatformAuditLogs,
     BlueprintGallery: BlueprintGallery,
+    ClientOnboarding: ClientOnboarding,
 }
 
 function _getCurrentPage(url) {
@@ -468,6 +472,17 @@ function PagesContent() {
                     >
                         <BlueprintGallery />
                     </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/ClientOnboarding" element={
+                <ProtectedRoute>
+                    {/* Only platform admins can access client onboarding */}
+                    {!isPlatformAdmin ? (
+                        <Navigate to="/Dashboard" replace />
+                    ) : (
+                        <ClientOnboarding />
+                    )}
                 </ProtectedRoute>
             } />
 

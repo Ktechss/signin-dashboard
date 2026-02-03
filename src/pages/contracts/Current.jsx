@@ -447,11 +447,11 @@ export default function Current() {
         return signer;
       });
 
-      // Check if all internal signers have signed
-      const internalSigners = updatedSigners.filter((s) => s.signerType === 'internal');
-      const allInternalSigned = internalSigners.every((s) => s.status === 'signed');
+      // Check if all establishment signers have signed
+      const establishmentSigners = updatedSigners.filter((s) => s.signerType === 'establishment');
+      const allEstablishmentSigned = establishmentSigners.every((s) => s.status === 'signed');
 
-      const newStatus = allInternalSigned ? 'pending_send' : contract.status;
+      const newStatus = allEstablishmentSigned ? 'pending_send' : contract.status;
 
       await contractsApi.update(contract.id, {
         signers: updatedSigners,
@@ -614,9 +614,9 @@ export default function Current() {
           return signer;
         });
 
-        const internalSigners = updatedSigners.filter((s) => s.signerType === 'internal');
-        const allInternalSigned = internalSigners.every((s) => s.status === 'signed');
-        const newStatus = allInternalSigned ? 'pending_send' : contract.status;
+        const establishmentSigners = updatedSigners.filter((s) => s.signerType === 'establishment');
+        const allEstablishmentSigned = establishmentSigners.every((s) => s.status === 'signed');
+        const newStatus = allEstablishmentSigned ? 'pending_send' : contract.status;
 
         return contractsApi.update(contract.id, {
           signers: updatedSigners,
@@ -1189,7 +1189,7 @@ export default function Current() {
           <DialogHeader>
             <DialogTitle>Sign Contract</DialogTitle>
             <DialogDescription>
-              You are about to sign "{signDialog.contract?.name}" as an internal signer. This action cannot
+              You are about to sign "{signDialog.contract?.name}" as an establishment signer. This action cannot
               be undone.
             </DialogDescription>
           </DialogHeader>
@@ -1404,7 +1404,7 @@ export default function Current() {
               Sign {selectedContracts.length} Contract{selectedContracts.length !== 1 ? 's' : ''}
             </DialogTitle>
             <DialogDescription>
-              You are about to sign as an internal signer.
+              You are about to sign as an establishment signer.
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center gap-3 p-4 bg-violet-50 rounded-lg border border-violet-200">
