@@ -788,19 +788,16 @@ export default function FieldPlacement({ className, documentPreview, onFieldsCha
                       </div>
                     )}
 
-                    {field.type === 'text' ? (
-                      <div className="flex items-center justify-center pointer-events-none px-2 w-full">
-                        <span className="text-xs font-medium text-slate-700 truncate">
-                          {field.label || 'Text Field'}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center pointer-events-none px-2 w-full">
-                        <span className="text-xs font-medium text-slate-600 truncate">
-                          {field.placeholder || fieldType?.label}
-                        </span>
-                      </div>
-                    )}
+                    {/* Field Label Display */}
+                    <div className="flex items-center justify-center pointer-events-none px-2 w-full">
+                      <span className="text-xs font-medium text-slate-700 truncate">
+                        {field.label || field.placeholder || fieldType?.label || 'Field'}
+                      </span>
+                      {/* Placeholder indicator */}
+                      {field.placeholderId && (
+                        <span className="ml-1 text-[10px] text-amber-600">●</span>
+                      )}
+                    </div>
 
                     {/* Resize Handle */}
                     <div

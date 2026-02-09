@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { getTemplateById, getDocumentUrl } from '@/utils/templateStorage';
+import { useAuth } from '@/pages/index';
 import { Document, Page, pdfjs } from 'react-pdf';
 import {
   ArrowLeft,
@@ -56,12 +57,14 @@ import DocumentViewer from '@/components/ui-custom/DocumentViewer';
 import { FieldOverlayList } from '@/components/templates/FieldOverlay';
 import VersionHistoryTab from '@/components/templates/VersionHistoryTab';
 import { cn } from '@/lib/utils';
+import { convertLatexToHtml } from '@/components/templates/LatexEditor';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 export default function TemplateDetail() {
   const [searchParams] = useSearchParams();
+  const { user, isPlatformAdmin } = useAuth();
   const templateId = searchParams.get('id');
   const [template, setTemplate] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -69,6 +72,10 @@ export default function TemplateDetail() {
   const [zoom, setZoom] = useState(100);
   const [viewingVersion, setViewingVersion] = useState(null);
   const [viewingSnapshot, setViewingSnapshot] = useState(null);
+
+  // Check if user is super admin (can edit blueprints)
+  // isPlatformAdmin is true when user exists and has no clientId
+  const isSuperAdmin = isPlatformAdmin === true || user?.isRootUser === true;
 
   // Handle PDF load success to get page count
   const onDocumentLoadSuccess = ({ numPages }) => {
@@ -156,8 +163,52 @@ export default function TemplateDetail() {
     phone: 'Phone'
   };
 
+  // Check if blueprint is usable for contract creation
+  const isUsableForContracts = template.status === 'active';
+  const isPendingApproval = template.status === 'pending_policy_approval';
+  const isRejected = template.status === 'policy_rejected';
+
   return (
     <div className="min-h-screen bg-slate-50/50">
+      {/* Status Banner for Pending Approval or Rejected */}
+      {(isPendingApproval || isRejected) && (
+        <div className={cn(
+          "px-6 py-3 flex items-center justify-between",
+          isPendingApproval ? "bg-amber-50 border-b border-amber-200" : "bg-red-50 border-b border-red-200"
+        )}>
+          <div className="flex items-center gap-3">
+            {isPendingApproval ? (
+              <>
+                <Clock className="w-5 h-5 text-amber-600" />
+                <div>
+                  <p className="font-medium text-amber-900">Pending Policy Approval</p>
+                  <p className="text-sm text-amber-700">
+                    This blueprint is waiting for ICP approval. Contracts cannot be created until approved.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <XCircle className="w-5 h-5 text-red-600" />
+                <div>
+                  <p className="font-medium text-red-900">Policy Changes Rejected</p>
+                  <p className="text-sm text-red-700">
+                    {template.policyApproval?.rejectionReason || 'The policy changes were rejected by ICP. Please review and resubmit.'}
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+          {isPendingApproval && isSuperAdmin && (
+            <Link to={createPageUrl('PolicyApprovalQueue')}>
+              <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+                Review Now
+              </Button>
+            </Link>
+          )}
+        </div>
+      )}
+
       {/* Compact Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
         <div className="max-w-8xl mx-auto px-6 py-3">
@@ -223,18 +274,39 @@ export default function TemplateDetail() {
                   {template.lastModified || 'Recently'}
                 </span>
               </div>
-              <Link to={createPageUrl(`ContractCreate?blueprintId=${templateId}`)}>
-                <Button size="sm" className="gap-2 bg-slate-900 hover:bg-slate-800">
-                  <PenTool className="w-3.5 h-3.5" />
+              {isUsableForContracts ? (
+                <Link to={createPageUrl(`ContractCreate?blueprintId=${templateId}`)}>
+                  <Button size="sm" className="gap-2 bg-slate-900 hover:bg-slate-800">
+                    <PenTool className="w-3.5 h-3.5" />
+                    Create Contract
+                  </Button>
+                </Link>
+              ) : (
+                <Button
+                  size="sm"
+                  className="gap-2"
+                  disabled
+                  title={isPendingApproval ? "Blueprint pending approval" : isRejected ? "Blueprint rejected" : "Blueprint not active"}
+                >
+                  <Lock className="w-3.5 h-3.5" />
                   Create Contract
                 </Button>
-              </Link>
-              <Link to={createPageUrl(`TemplateBuilder?id=${templateId}`)}>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Edit className="w-3.5 h-3.5" />
-                  Edit
-                </Button>
-              </Link>
+              )}
+              {isSuperAdmin ? (
+                <Link to={createPageUrl(`TemplateBuilder?id=${templateId}`)}>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Edit className="w-3.5 h-3.5" />
+                    Edit
+                  </Button>
+                </Link>
+              ) : (
+                <Link to={createPageUrl(`TemplateBuilder?id=${templateId}&import=true`)}>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Download className="w-3.5 h-3.5" />
+                    Import Blueprint
+                  </Button>
+                </Link>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon" className="h-8 w-8">
@@ -308,7 +380,11 @@ export default function TemplateDetail() {
             <div className={cn("h-full overflow-auto p-6", viewingVersion && viewingVersion !== template.version && "pt-14")}>
               {(displayData.documentUrl || displayData.documentData || displayData.filePreview || displayData.preview) ? (
                 <div className="flex flex-col items-center gap-4">
-                  {(displayData.documentType === 'application/pdf' || displayData.documentData?.type === 'application/pdf') ? (
+                  {(displayData.documentType === 'application/pdf' ||
+                    displayData.documentData?.type === 'application/pdf' ||
+                    displayData.documentUrl?.toLowerCase().includes('.pdf') ||
+                    displayData.fileName?.toLowerCase().endsWith('.pdf') ||
+                    displayData.documentSourceType === 'latex') ? (
                     <Document
                       file={displayData.documentUrl ? getDocumentUrl(displayData.documentUrl) : displayData.documentData?.data}
                       onLoadSuccess={onDocumentLoadSuccess}
@@ -407,6 +483,28 @@ export default function TemplateDetail() {
                       })}
                     </div>
                   )}
+                </div>
+              ) : displayData.documentSourceType === 'latex' && displayData.latexContent ? (
+                /* Render LaTeX content directly if no PDF is available */
+                <div className="flex flex-col items-center gap-4">
+                  <div
+                    className="bg-white shadow-xl rounded-lg overflow-hidden"
+                    style={{ width: 595 * (zoom / 100), minHeight: 842 * (zoom / 100) }}
+                  >
+                    <div
+                      className="p-12"
+                      style={{
+                        fontFamily: "'Times New Roman', Times, serif",
+                        fontSize: 12 * (zoom / 100),
+                        lineHeight: 1.6,
+                      }}
+                      dangerouslySetInnerHTML={{ __html: convertLatexToHtml(displayData.latexContent) }}
+                    />
+                  </div>
+                  <div className="text-center text-sm text-amber-600 bg-amber-50 px-4 py-2 rounded-lg">
+                    <AlertTriangle className="w-4 h-4 inline mr-2" />
+                    PDF not generated. Edit this blueprint to generate and save the PDF.
+                  </div>
                 </div>
               ) : (
                 <div className="h-full flex items-center justify-center">

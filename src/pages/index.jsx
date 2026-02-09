@@ -23,6 +23,7 @@ import Templates from "./templates/Templates";
 import TemplateBuilder from "./templates/TemplateBuilder";
 import TemplateDetail from "./templates/TemplateDetail";
 import BlueprintGallery from "./templates/BlueprintGallery";
+import PolicyApprovalQueue from "./templates/PolicyApprovalQueue";
 
 // Analytics pages
 import Analytics from "./analytics/Analytics";
@@ -78,6 +79,7 @@ const PAGES = {
     PlatformAuditLogs: PlatformAuditLogs,
     BlueprintGallery: BlueprintGallery,
     ClientOnboarding: ClientOnboarding,
+    PolicyApprovalQueue: PolicyApprovalQueue,
 }
 
 function _getCurrentPage(url) {
@@ -482,6 +484,26 @@ function PagesContent() {
                         <Navigate to="/Dashboard" replace />
                     ) : (
                         <ClientOnboarding />
+                    )}
+                </ProtectedRoute>
+            } />
+
+            <Route path="/PolicyApprovalQueue" element={
+                <ProtectedRoute>
+                    {/* Only platform admins (ICP) can access policy approval queue */}
+                    {!isPlatformAdmin ? (
+                        <Navigate to="/Dashboard" replace />
+                    ) : (
+                        <Layout
+                            currentPageName={currentPage}
+                            user={user}
+                            onLogout={handleLogout}
+                            selectedClient={selectedClient}
+                            onClientSelect={handleClientSelect}
+                            onBackToPlatform={handleBackToPlatform}
+                        >
+                            <PolicyApprovalQueue />
+                        </Layout>
                     )}
                 </ProtectedRoute>
             } />

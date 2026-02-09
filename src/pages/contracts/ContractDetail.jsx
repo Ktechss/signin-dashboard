@@ -942,12 +942,17 @@ export default function ContractDetail() {
                       renderAnnotationLayer={false}
                       className="shadow-lg bg-white"
                     />
-                    {/* Field Value Overlays */}
+                    {/* Field Values as Plain Text - Only show if value exists */}
                     {(contract.fields || [])
                       .filter(field => field.page === currentPage || (!field.page && currentPage === 1))
                       .map((field) => {
                         const value = field.value || contract.fieldValues?.[field.id];
-                        if (!value && field.type !== 'signature') return null;
+                        const isSignature = field.type === 'signature' || field.type === 'initials';
+
+                        // If no value, leave blank (don't render anything)
+                        if (!value && !isSignature) return null;
+                        // For signatures without actual signature data, also leave blank
+                        if (isSignature && !value) return null;
 
                         const scale = zoom / 100;
                         return (
@@ -957,20 +962,15 @@ export default function ContractDetail() {
                             style={{
                               left: (field.x || 0) * scale,
                               top: (field.y || 0) * scale,
-                              width: (field.width || 100) * scale,
-                              height: (field.height || 20) * scale,
                               fontSize: Math.max(10, 12 * scale),
-                              display: 'flex',
-                              alignItems: 'center',
-                              color: '#1e293b',
-                              fontFamily: 'system-ui, sans-serif',
                             }}
                           >
-                            {field.type === 'signature' ? (
-                              <span className="text-slate-400 italic text-xs">[Signature]</span>
-                            ) : (
-                              <span className="truncate">{value}</span>
-                            )}
+                            <span className={cn(
+                              'whitespace-nowrap',
+                              isSignature ? 'italic text-slate-500' : 'text-slate-900 font-medium'
+                            )}>
+                              {value}
+                            </span>
                           </div>
                         );
                       })}
@@ -979,12 +979,17 @@ export default function ContractDetail() {
               ) : (
                 <div className="relative" style={{ width: 595 * (zoom / 100) }}>
                   <img src={getDocumentUrl(contract.documentUrl)} alt="Document" className="w-full shadow-lg bg-white" />
-                  {/* Field Value Overlays for Images */}
+                  {/* Field Values as Plain Text - Only show if value exists */}
                   {(contract.fields || [])
                     .filter(field => field.page === currentPage || (!field.page && currentPage === 1))
                     .map((field) => {
                       const value = field.value || contract.fieldValues?.[field.id];
-                      if (!value && field.type !== 'signature') return null;
+                      const isSignature = field.type === 'signature' || field.type === 'initials';
+
+                      // If no value, leave blank (don't render anything)
+                      if (!value && !isSignature) return null;
+                      // For signatures without actual signature data, also leave blank
+                      if (isSignature && !value) return null;
 
                       const scale = zoom / 100;
                       return (
@@ -994,20 +999,15 @@ export default function ContractDetail() {
                           style={{
                             left: (field.x || 0) * scale,
                             top: (field.y || 0) * scale,
-                            width: (field.width || 100) * scale,
-                            height: (field.height || 20) * scale,
                             fontSize: Math.max(10, 12 * scale),
-                            display: 'flex',
-                            alignItems: 'center',
-                            color: '#1e293b',
-                            fontFamily: 'system-ui, sans-serif',
                           }}
                         >
-                          {field.type === 'signature' ? (
-                            <span className="text-slate-400 italic text-xs">[Signature]</span>
-                          ) : (
-                            <span className="truncate">{value}</span>
-                          )}
+                          <span className={cn(
+                            'whitespace-nowrap',
+                            isSignature ? 'italic text-slate-500' : 'text-slate-900 font-medium'
+                          )}>
+                            {value}
+                          </span>
                         </div>
                       );
                     })}

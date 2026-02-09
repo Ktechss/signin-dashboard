@@ -49,6 +49,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { SIGNER_TYPES } from '@/components/templates/SignerCard';
 import { FIELD_TYPES } from '@/components/templates/FieldOverlay';
+import { convertLatexToHtml } from '@/components/templates/LatexEditor';
 import EstablishmentFieldsDisplay from '@/components/contracts/EstablishmentFieldsDisplay';
 import { DEFAULT_ESTABLISHMENT_FIELDS, ESTABLISHMENT_FIELDS, getValueFromPath } from '@/constants/establishmentFields';
 import { Progress } from '@/components/ui/progress';
@@ -1410,10 +1411,14 @@ export default function ContractCreate() {
                 <span className="text-xs text-slate-500">{selectedBlueprint?.fields?.length || 0} fields</span>
               </div>
               <div className="flex-1 p-4 bg-slate-100 overflow-y-auto">
-                {(selectedBlueprint?.documentUrl || selectedBlueprint?.documentData?.data) ? (
-                  (selectedBlueprint.documentType === 'application/pdf' || selectedBlueprint?.documentData?.type === 'application/pdf') ? (
+                {(selectedBlueprint?.documentUrl || selectedBlueprint?.documentData?.data || selectedBlueprint?.preview || selectedBlueprint?.filePreview) ? (
+                  (selectedBlueprint.documentType === 'application/pdf' ||
+                   selectedBlueprint?.documentData?.type === 'application/pdf' ||
+                   selectedBlueprint?.documentUrl?.toLowerCase().includes('.pdf') ||
+                   selectedBlueprint?.fileName?.toLowerCase().endsWith('.pdf') ||
+                   selectedBlueprint?.documentSourceType === 'latex') ? (
                     <Document
-                      file={selectedBlueprint.documentUrl ? getDocumentUrl(selectedBlueprint.documentUrl) : selectedBlueprint.documentData.data}
+                      file={selectedBlueprint.documentUrl ? getDocumentUrl(selectedBlueprint.documentUrl) : (selectedBlueprint.documentData?.data || selectedBlueprint.preview || selectedBlueprint.filePreview)}
                       onLoadSuccess={({ numPages }) => setReviewNumPages(numPages)}
                       onLoadError={(error) => console.error('PDF load error:', error)}
                       loading={<div className="text-center py-8 text-slate-500">Loading PDF...</div>}
@@ -1427,31 +1432,31 @@ export default function ContractCreate() {
                             renderAnnotationLayer={false}
                             className="shadow-lg rounded-lg"
                           />
-                          {/* Field Values as Plain Text */}
+                          {/* Field Values as Plain Text - Only show if value exists */}
                           {(selectedBlueprint?.fields || [])
                             .filter(f => (f.page || 1) === index + 1)
                             .map((field) => {
                               const displayValue = getFieldDisplayValue(field);
                               const isSignature = field.type === 'signature' || field.type === 'initials';
-                              const fieldLabel = field.label || field.placeholder || FIELD_TYPES[field.type]?.label || field.type;
                               const hasValue = displayValue && displayValue !== '';
+
+                              // If no value, leave blank (don't render anything)
+                              if (!hasValue) return null;
 
                               return (
                                 <div
                                   key={field.id}
-                                  className="absolute flex items-center"
+                                  className="absolute flex items-center pointer-events-none"
                                   style={{
                                     left: `${(field.x / 595) * 100}%`,
                                     top: `${(field.y / 842) * 100}%`,
                                   }}
                                 >
                                   <span className={cn(
-                                    'text-xs whitespace-nowrap',
-                                    hasValue
-                                      ? isSignature ? 'italic text-slate-600' : 'text-slate-900'
-                                      : 'text-slate-400'
+                                    'text-sm whitespace-nowrap',
+                                    isSignature ? 'italic text-slate-500' : 'text-slate-900 font-medium'
                                   )}>
-                                    {hasValue ? displayValue : fieldLabel}
+                                    {displayValue}
                                   </span>
                                 </div>
                               );
@@ -1462,12 +1467,34 @@ export default function ContractCreate() {
                   ) : (
                     <div className="relative mx-auto" style={{ width: 550 }}>
                       <img
-                        src={selectedBlueprint.documentUrl ? getDocumentUrl(selectedBlueprint.documentUrl) : selectedBlueprint.documentData?.data}
+                        src={selectedBlueprint.documentUrl ? getDocumentUrl(selectedBlueprint.documentUrl) : (selectedBlueprint.documentData?.data || selectedBlueprint.preview || selectedBlueprint.filePreview || selectedBlueprint.thumbnailUrl ? getDocumentUrl(selectedBlueprint.thumbnailUrl) : null)}
                         alt="Document"
                         className="w-full rounded-lg shadow-lg"
                       />
                     </div>
                   )
+                ) : selectedBlueprint?.documentSourceType === 'latex' && selectedBlueprint?.latexContent ? (
+                  /* Render LaTeX content directly if no PDF is available */
+                  <div className="flex flex-col items-center gap-4 mx-auto" style={{ width: 550 }}>
+                    <div
+                      className="bg-white shadow-lg rounded-lg overflow-hidden w-full"
+                      style={{ minHeight: 780 }}
+                    >
+                      <div
+                        className="p-10"
+                        style={{
+                          fontFamily: "'Times New Roman', Times, serif",
+                          fontSize: 11,
+                          lineHeight: 1.6,
+                        }}
+                        dangerouslySetInnerHTML={{ __html: convertLatexToHtml(selectedBlueprint.latexContent) }}
+                      />
+                    </div>
+                    <div className="text-center text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg">
+                      <AlertCircle className="w-3.5 h-3.5 inline mr-1.5" />
+                      Preview from LaTeX. Edit blueprint to generate PDF.
+                    </div>
+                  </div>
                 ) : (
                   <div className="text-center py-12">
                     <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />

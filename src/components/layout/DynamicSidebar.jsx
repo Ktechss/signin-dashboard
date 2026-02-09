@@ -31,6 +31,7 @@ import {
   FilePen,
   Clock,
   Eye,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getUserInitials } from '@/utils/userStorage';
@@ -40,6 +41,7 @@ const platformNavItems = [
   { id: 'search', labelKey: 'nav.governmentSearch', icon: Search, href: 'GovernmentSearch' },
   { id: 'analytics', labelKey: 'nav.analytics', icon: BarChart3, href: 'PlatformAnalytics' },
   { id: 'blueprints', labelKey: 'nav.blueprintGallery', icon: Library, href: 'BlueprintGallery' },
+  { id: 'policy-approvals', labelKey: 'nav.policyApprovals', icon: Shield, href: 'PolicyApprovalQueue' },
   {
     id: 'logs',
     labelKey: 'nav.logs',

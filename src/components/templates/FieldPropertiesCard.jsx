@@ -7,6 +7,7 @@ import {
   Database,
   Link2,
   Unlink,
+  Variable,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -118,6 +119,12 @@ export default function FieldPropertiesCard({
           <span className="text-sm font-medium text-slate-700">
             {field.label || fieldType?.label || `Field ${index + 1}`}
           </span>
+          {field.placeholderId && (
+            <span className="flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+              <Variable className="w-2.5 h-2.5" />
+              LaTeX
+            </span>
+          )}
           {field.echannelMapping && (
             <span className="flex items-center gap-1 text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
               <Link2 className="w-2.5 h-2.5" />
@@ -190,6 +197,25 @@ export default function FieldPropertiesCard({
             {/* Details Tab */}
             {activeTab === 'details' && (
               <>
+                {/* LaTeX Placeholder Info - Show if field came from LaTeX */}
+                {field.placeholderId && (
+                  <div className="space-y-1.5 p-2.5 bg-amber-50 rounded-lg border border-amber-100 mb-3">
+                    <div className="flex items-center gap-1.5">
+                      <Variable className="w-3.5 h-3.5 text-amber-600" />
+                      <Label className="text-xs font-medium text-amber-700">LaTeX Placeholder</Label>
+                    </div>
+                    <p className="text-[10px] text-amber-600">
+                      This field is linked to the LaTeX placeholder:
+                    </p>
+                    <code className="block text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded font-mono">
+                      {field.placeholder || `{{${field.placeholderId}}}`}
+                    </code>
+                    <p className="text-[10px] text-amber-600 mt-1">
+                      Drag to position where this data should appear on the document.
+                    </p>
+                  </div>
+                )}
+
                 {/* E-Channel Data Mapping - Only for establishment signers */}
                 {canMapToEchannel && (
                   <div className="space-y-1.5 p-2.5 bg-blue-50 rounded-lg border border-blue-100">

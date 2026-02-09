@@ -252,7 +252,7 @@ function BlueprintCard({ blueprint, onEdit, onDelete, onDuplicate, onView, onAss
 export default function BlueprintGallery() {
   const [blueprints, setBlueprints] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('org-specific');
+  const [activeTab, setActiveTab] = useState('public');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [clientFilter, setClientFilter] = useState('all');
@@ -265,39 +265,24 @@ export default function BlueprintGallery() {
   const [createVisibility, setCreateVisibility] = useState('public');
   const [createClientId, setCreateClientId] = useState('');
 
-  // Load blueprints from sample-blueprints.json and localStorage
+  // Load blueprints from API (templates created by super admin)
   useEffect(() => {
     const loadBlueprints = async () => {
       setLoading(true);
       try {
-        // Load sample blueprints from JSON file
-        const response = await fetch('/sample-blueprints.json');
-        const sampleBlueprints = await response.json();
+        // Load templates from API (created by super admin)
+        const savedTemplates = await getTemplates();
 
-        // Load user-created templates from localStorage
-        const savedTemplates = getTemplates();
-
-        // Add visibility field to blueprints that don't have it
-        // Map existing categories to visibility
-        const processedSamples = sampleBlueprints.map((bp, index) => ({
-          ...bp,
-          visibility: bp.visibility || getVisibilityFromCategory(bp.category, index),
-          assignedClient: bp.assignedClient || (index % 4 === 0 ? clients[0] : index % 4 === 1 ? clients[1] : index % 4 === 2 ? clients[2] : clients[3]),
-        }));
-
-        const processedSaved = savedTemplates.map(bp => ({
+        // Process templates with visibility
+        const processedTemplates = savedTemplates.map(bp => ({
           ...bp,
           visibility: bp.visibility || 'public',
         }));
 
-        // Combine both arrays
-        const allBlueprints = [...processedSamples, ...processedSaved];
-        setBlueprints(allBlueprints);
+        setBlueprints(processedTemplates);
       } catch (error) {
         console.error('Error loading blueprints:', error);
-        // If sample blueprints fail to load, at least show localStorage templates
-        const savedTemplates = getTemplates();
-        setBlueprints(savedTemplates.map(bp => ({ ...bp, visibility: bp.visibility || 'public' })));
+        setBlueprints([]);
       } finally {
         setLoading(false);
       }
@@ -305,14 +290,6 @@ export default function BlueprintGallery() {
 
     loadBlueprints();
   }, []);
-
-  // Helper to map category to visibility
-  const getVisibilityFromCategory = (category, index) => {
-    // Distribute sample blueprints across visibility types
-    if (index % 3 === 0) return 'org-specific';
-    if (index % 3 === 1) return 'internal';
-    return 'public';
-  };
 
   // Filter blueprints
   const filteredBlueprints = blueprints.filter(bp => {
@@ -369,16 +346,20 @@ export default function BlueprintGallery() {
     setIsAssignOpen(true);
   };
 
-  const confirmDelete = () => {
-    // Delete from localStorage if it's a saved template
+  const confirmDelete = async () => {
+    // Delete from API
     if (selectedBlueprint) {
-      deleteTemplate(selectedBlueprint.id);
-      setBlueprints(blueprints.filter(bp => bp.id !== selectedBlueprint.id));
+      try {
+        await deleteTemplate(selectedBlueprint.id);
+        setBlueprints(blueprints.filter(bp => bp.id !== selectedBlueprint.id));
+      } catch (error) {
+        console.error('Error deleting blueprint:', error);
+      }
     }
     setIsDeleteOpen(false);
   };
 
-  const confirmAssign = () => {
+  const confirmAssign = async () => {
     if (selectedBlueprint) {
       const client = clients.find(c => c.id === parseInt(assignClientId));
       const updatedBlueprint = {
@@ -387,12 +368,14 @@ export default function BlueprintGallery() {
         assignedClient: assignVisibility === 'org-specific' ? client : null,
       };
 
-      setBlueprints(blueprints.map(bp =>
-        bp.id === selectedBlueprint.id ? updatedBlueprint : bp
-      ));
-
-      // Update in localStorage if it's a saved template
-      updateTemplate(selectedBlueprint.id, updatedBlueprint);
+      try {
+        await updateTemplate(selectedBlueprint.id, updatedBlueprint);
+        setBlueprints(blueprints.map(bp =>
+          bp.id === selectedBlueprint.id ? updatedBlueprint : bp
+        ));
+      } catch (error) {
+        console.error('Error updating blueprint:', error);
+      }
     }
     setIsAssignOpen(false);
   };

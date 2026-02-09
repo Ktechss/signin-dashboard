@@ -16,6 +16,8 @@ export const TEMPLATE_STATUS = {
   DRAFT: 'draft',
   ACTIVE: 'active',
   ARCHIVED: 'archived',
+  PENDING_POLICY_APPROVAL: 'pending_policy_approval',
+  POLICY_REJECTED: 'policy_rejected',
 };
 
 // Signer Status Constants
@@ -67,6 +69,8 @@ export const STATUS_COLORS = {
   draft: { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200', dot: 'bg-slate-400' },
   active: { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200', dot: 'bg-cyan-500' },
   archived: { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', dot: 'bg-violet-500' },
+  pending_policy_approval: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
+  policy_rejected: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
 
   // Signer statuses
   sent: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
@@ -98,6 +102,8 @@ export const STATUS_LABELS = {
   revoked: 'Revoked',
   active: 'Active',
   archived: 'Archived',
+  pending_policy_approval: 'Pending Approval',
+  policy_rejected: 'Policy Rejected',
   sent: 'Sent',
   viewed: 'Viewed',
   declined: 'Declined',

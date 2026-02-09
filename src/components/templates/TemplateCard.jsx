@@ -9,7 +9,10 @@ import {
   Eye,
   FileText,
   Users,
-  Clock
+  Clock,
+  Shield,
+  XCircle,
+  Lock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,11 +38,17 @@ export default function TemplateCard({ template, onClick, className }) {
   } = template;
 
   const thumbnailSrc = filePreview || preview;
+  const isPendingApproval = status === 'pending_policy_approval';
+  const isRejected = status === 'policy_rejected';
+  const isNotActive = status !== 'active' && status !== 'draft';
 
   return (
     <div
       className={cn(
         'group bg-white rounded-xl border border-slate-200/60 overflow-hidden hover:shadow-lg hover:shadow-slate-200/50 hover:border-slate-300/60 transition-all duration-300 cursor-pointer',
+        (isPendingApproval || isRejected) && 'border-l-4',
+        isPendingApproval && 'border-l-amber-500',
+        isRejected && 'border-l-red-500',
         className
       )}
       onClick={onClick}
@@ -50,7 +59,10 @@ export default function TemplateCard({ template, onClick, className }) {
           <img
             src={thumbnailSrc}
             alt={name}
-            className="w-full h-full object-cover object-top"
+            className={cn(
+              "w-full h-full object-cover object-top",
+              (isPendingApproval || isRejected) && "opacity-70"
+            )}
           />
         ) : (
           <div className="absolute inset-4 bg-white rounded-lg shadow-sm flex items-center justify-center">
@@ -65,7 +77,21 @@ export default function TemplateCard({ template, onClick, className }) {
             </div>
           </div>
         )}
-        
+
+        {/* Status Banner for Pending/Rejected */}
+        {isPendingApproval && (
+          <div className="absolute top-0 left-0 right-0 bg-amber-500/90 text-white px-3 py-1.5 flex items-center gap-2 text-xs font-medium">
+            <Shield className="w-3.5 h-3.5" />
+            Pending Approval
+          </div>
+        )}
+        {isRejected && (
+          <div className="absolute top-0 left-0 right-0 bg-red-500/90 text-white px-3 py-1.5 flex items-center gap-2 text-xs font-medium">
+            <XCircle className="w-3.5 h-3.5" />
+            Policy Rejected
+          </div>
+        )}
+
         {/* Overlay on hover */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
           <Button size="sm" className="gap-2 bg-white text-slate-900 hover:bg-slate-100" onClick={(e) => e.stopPropagation()}>
